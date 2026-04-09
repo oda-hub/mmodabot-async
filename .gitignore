@@ -1,0 +1,5 @@
+.venv
+.vscode
+tmp
+**__pycache__**
+.pytest_cache

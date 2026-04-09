@@ -1,0 +1,41 @@
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mmodabot"]
+
+[project]
+name = "mmoda-bot"
+version = "0.1.0"
+description = "The bot to build and install MMODA backends from the notebooks in git repositories."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "kubernetes>=35.0.0",
+    "pyyaml>=6.0.3",
+    "python-gitlab>=8.1.0",
+    "gitpython>=3.1.46",
+    "aiohttp>=3.13.4",
+    "sentry-sdk>=2.57.0",
+    "nb2workflow>=1.3.118",
+    "markdown>=3.10.2",
+    "markdown-katex>=202406.1035",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = "-v --tb=short"
+
+[project.scripts]
+mmodabot = "mmodabot.main:run"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+]

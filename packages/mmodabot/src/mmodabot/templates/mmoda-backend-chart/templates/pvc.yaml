@@ -1,0 +1,15 @@
+{{- if .Values.pvc.enabled }}
+  apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: {{ include "mmoda-backend.fullname" . }}-pvc
+    labels:
+      {{- include "mmoda-backend.labels" . | nindent 4 }}
+  spec:
+    accessModes:
+      - {{ .Values.pvc.accessMode }}
+    resources:
+      requests:
+        storage: {{ .Values.pvc.size }}
+    storageClassName: {{ .Values.pvc.storageClassName | default "" }}
+{{- end }}
