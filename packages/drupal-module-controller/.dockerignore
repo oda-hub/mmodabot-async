@@ -1,5 +1,8 @@
 **__pycache__
 **.pytest_cache
-scripts
-tests
-docs
+.venv
+.vscode
+**.git*
+packages/*/scripts
+packages/*/tests
+packages/*/docs
