@@ -1,6 +1,28 @@
+import os
+import tempfile
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+import yaml
 
+from unittest.mock import MagicMock, AsyncMock
+from kubernetes import config as kube_config
+
+
+@pytest.fixture(scope="session")
+def mock_kubeconfig():
+    kubeconfig = {
+        "apiVersion": "v1",
+        "clusters": [{"cluster": {"server": "https://mock-server:6443"}, "name": "mock-cluster"}],
+        "users": [{"name": "mock-user", "user": {"token": "mock-token"}}],
+        "contexts": [{"context": {"cluster": "mock-cluster", "user": "mock-user"}, "name": "mock-context"}],
+        "current-context": "mock-context",
+    }
+
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".yaml") as f:
+        yaml.dump(kubeconfig, f)
+        os.environ["KUBECONFIG"] = f.name
+        kube_config.load_kube_config()
+        yield
+        os.unsetenv("KUBECONFIG")
 
 @pytest.fixture
 def mock_commit():
