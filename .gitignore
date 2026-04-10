@@ -3,3 +3,5 @@
 tmp
 **__pycache__**
 .pytest_cache
+kg.ttl
+mmodabot-config.toml

@@ -35,8 +35,3 @@ addopts = "-v --tb=short"
 [project.scripts]
 mmodabot = "mmodabot.main:run"
 
-[dependency-groups]
-dev = [
-    "pytest>=9.0.2",
-    "pytest-asyncio>=1.3.0",
-]
