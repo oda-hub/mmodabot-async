@@ -6,6 +6,10 @@ from mmodabot.git_interface import CommitType
 type ApiResponse = requests.Response | aiohttp.ClientResponse
 
 class NotificationHandler:
+    """
+    Base class for notification handlers. Subclasses can override any of the methods to handle specific events.
+    Not ABC to allow for flexible implementations without requiring all methods to be defined.
+    """
     def on_build_started(self, repo_url: str, commit: CommitType, image_tag: str): ...
     def on_build_completed(self, repo_url: str, commit: CommitType, image_repo: str, image_tag: str): ...
     def on_build_failed(self, repo_url: str, commit: CommitType, image_tag: str, data: dict = {}): ...
@@ -19,18 +23,40 @@ class NotificationHandler:
     def on_frontend_updated(self, repo_url: str, commit: CommitType): ...
     def on_frontend_update_failed(self, repo_url: str, commit: CommitType, response: ApiResponse | None = None, ex: Exception | None = None): ...
 
+
 class CompositeNotificationHandler(NotificationHandler):
     def __init__(self, handlers: Sequence[NotificationHandler]):
         self.handlers = handlers
 
-    def __getattr__(self, name: str) -> Callable[..., Any]:
-        # Delegate all method calls to each handler
-        def method(*args, **kwargs):
+    @staticmethod
+    def delegated(method_name: str) -> Callable[..., Any]:
+        def method(self, *args, **kwargs):
+            if not self.handlers:
+                # check method signature against superclass method to ensure correct usage
+                super_method = getattr(super(), method_name)
+                try:
+                    super_method(*args, **kwargs)
+                except TypeError as e:
+                    raise TypeError(f"Incorrect arguments for method {method_name}: {e}")
             for handler in self.handlers:
-                getattr(handler, name)(*args, **kwargs)
+                getattr(handler, method_name)(*args, **kwargs)
         return method
 
+    on_build_started = delegated('on_build_started')
+    on_build_completed = delegated('on_build_completed')
+    on_build_failed = delegated('on_build_failed')
+    on_build_cancelled = delegated('on_build_cancelled')
+    on_deployment_started = delegated('on_deployment_started')
+    on_deployment_completed = delegated('on_deployment_completed')
+    on_deployment_failed = delegated('on_deployment_failed')
+    on_backend_registered = delegated('on_backend_registered')
+    on_backend_registration_failed = delegated('on_backend_registration_failed')
+    on_frontend_update_started = delegated('on_frontend_update_started')
+    on_frontend_updated = delegated('on_frontend_updated')
+    on_frontend_update_failed = delegated('on_frontend_update_failed')
+
 class LoggingNotificationHandler(NotificationHandler):
+    # this is used for manual testing
     def __init__(self, logger=None):
         import logging
         self.logger = logger or logging.getLogger(__name__)
