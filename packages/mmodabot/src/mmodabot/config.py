@@ -4,7 +4,7 @@ import hashlib
 from pathlib import Path
 from typing import Any, Literal, cast
 
-from pydantic import BaseModel, Field, HttpUrl, FilePath
+from pydantic import BaseModel, DirectoryPath, Field, HttpUrl, FilePath, AnyUrl
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, TomlConfigSettingsSource
 
 import mmodabot.notifier as mmnt
@@ -54,7 +54,7 @@ class BuilderConfig(BaseModel):
 class BackendDeployerConfig(BaseModel):
     enabled: bool = True
     mechanism: Literal['helm-cli'] = 'helm-cli'
-    helm_chart: FilePath = cast(Path, files("mmodabot").joinpath("templates", "mmoda-backend-chart"))
+    helm_chart: FilePath | DirectoryPath | AnyUrl = cast(Path, files("mmodabot").joinpath("templates", "mmoda-backend-chart"))
     values: dict[str, Any] = Field(default_factory=dict)
     timeout: str = "5m"
 

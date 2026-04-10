@@ -1,0 +1,53 @@
+namespace = "default"
+
+[monitor]
+triggering_topics = ["mmoda-live-service"]
+groups_poll_timeout = 300  # sec
+repo_poll_timeout = 60  # sec
+
+[[monitor.groups]]
+url = "https://gitlab.example.com/mmoda"
+gitlab_base = "https://gitlab.example.com/"
+git_token_secret_name = "mmoda-group-token"
+git_token_secret_key = "token"
+registry_secret_name = "mmoda-group-registry-token"
+target_image_base_tmpl = "gitlab-registry.example.com/mmoda/{slug}"
+
+[[monitor.groups]]
+url = "https://gitlab.example.com/other"
+git_token_secret_name = "other-group-token"
+git_token_secret_key = "token"
+registry_secret_name = "other-group-registry-token"
+target_image_base_tmpl = "gitlab-registry.example.com/other/{slug}"
+
+[[monitor.repos]]
+url = "https://gitlab.example.com/username/reponame"
+git_token_secret_name = "private-repo-token"
+git_token_secret_key = "token"
+registry_secret_name = "private-repo-registry-token"
+target_image_base = "gitlab-registry.example.com/username/reponame"
+
+[builder]
+enabled = true
+nb2w_version_spec = ""  # Empty means latest from pypi. May also use git+ reference
+job_concurrency = 3
+job_queue_size = 100
+# dockerfile_path = "/path/to/local/Dockerfile"
+# job_tmpl_path = "/path/to/local/job.yaml"
+
+[backend_deployer]
+enabled = true
+timeout = "5m" # Helm deployment timeout
+# helm_chart = <directory>/<local_archive>/<remote_archive>/<oci>
+
+[registrar]
+enabled = true
+url = "http://oda-dispatcher:8181"
+
+[frontend_controller]
+enabled = true
+url = "http://frontend:8181"
+
+[[notifiers]]
+handler_name = "LoggingNotificationHandler"
+params = {}
