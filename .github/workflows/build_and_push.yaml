@@ -45,6 +45,7 @@ jobs:
     if: ${{ github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'build-docker') }}
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         # Parse JSON array containing names of all filters matching any of changed files
         # e.g. ['package1', 'package2'] if both package folders contains changes
@@ -78,9 +79,9 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: packages/${{ matrix.package }}
-          file: ${{ matrix.package.path }}/Dockerfile
+          file: packages/${{ matrix.package }}/Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository }}-${{ matrix.package }}:${{ steps.meta.outputs.tag }}
+          tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
