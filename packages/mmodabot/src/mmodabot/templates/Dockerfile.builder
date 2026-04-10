@@ -133,7 +133,7 @@ config = {
 if os.path.exists(os.path.join(repo_base, 'mmoda.yaml')):
     with open(os.path.join(repo_base, 'mmoda.yaml')) as fd:
         extra_config = yaml.safe_load(fd)
-    config.update(config)
+    config.update(extra_config)
 
 nbpath = os.path.join(repo_base, config['notebook_path'].strip("/"))
 filename_pattern = config['filename_pattern']
@@ -193,6 +193,7 @@ RUN <<EOF
 EOF
 
 RUN micromamba run -n base python /home/mambauser/config.py /home/mambauser/repo /home/mambauser/cmd.sh ; chmod +x /home/mambauser/cmd.sh
+RUN rm /home/mambauser/config.py /home/mambauser/normalize-env.py
 
 RUN micromamba env config -n base vars set ODA_WORKFLOW_VERSION="$(micromamba run -n base git describe --always --tags)"
 RUN micromamba env config -n base vars set ODA_WORKFLOW_LAST_AUTHOR="$(micromamba run -n base git log -1 --pretty=format:'%an <%ae>')"
