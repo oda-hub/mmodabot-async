@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 import gitlab
 from gitlab.v4.objects import ProjectCommit, ProjectCommitManager
@@ -29,11 +29,11 @@ class GitServerInterface:
     def __init__(self, instance: str | gitlab.Gitlab, kind='gitlab', token=None):
         if kind == 'gitlab':
             if hasattr(instance, 'projects') and hasattr(instance, 'url'):
-                self.git = instance
+                self.git = cast(gitlab.Gitlab, instance)
                 instance_url = self.git.url
             else:
                 instance_url = instance
-                self.git = gitlab.Gitlab(instance_url, private_token=token)
+                self.git = gitlab.Gitlab(instance_url, private_token=token)  # type: ignore[union-attr]
 
             logger.debug(f"Initializing Gitlab interface for instance {instance_url}")
 

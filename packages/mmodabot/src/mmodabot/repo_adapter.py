@@ -340,7 +340,7 @@ class NBRepoAdapter:
 
     async def react_repo_change(self, git_ref: str, commit: CommitType):
         commit_id = commit.id
-        logger.info(f"Detected change in {self.repo_url}@{git_ref}, commit id: {commit_id}.")
+        logger.info(f"Acting on the latest commit in {self.repo_url}@{git_ref}: {commit_id}.")
 
         result = await self.ensure_container_image(git_ref, commit)
 

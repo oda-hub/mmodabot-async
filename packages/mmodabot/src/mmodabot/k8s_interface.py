@@ -43,7 +43,7 @@ class K8SInterface:
 
         return decoded_data
 
-    def create_cm(self, name: str, data: dict):
+    def create_cm(self, name: str, data: dict, raise_if_exists=False):
         try:
             cm = client.V1ConfigMap(
                 metadata=client.V1ObjectMeta(name=name),
@@ -54,6 +54,8 @@ class K8SInterface:
             return typing.cast(client.V1ConfigMap, cm)
         except client.ApiException as e:
             logger.error(f"Failed to create ConfigMap '{name}': {e}")
+            if e.status == 409 and raise_if_exists:
+                raise Exception(f"ConfigMap '{name}' already exists.")
 
     def update_cm(self, name: str, data: dict):
         try:
@@ -130,11 +132,11 @@ class K8SInterface:
                 status = job.status # type: ignore
 
                 if status.succeeded:
-                    print(f"Job {job_spec['metadata']['name']} suceeded")
+                    logger.debug(f"Job {job_spec['metadata']['name']} suceeded")
                     return "succeeded"
 
                 if status.failed:
-                    print(f"Job {job_spec['metadata']['name']} failed")
+                    logger.error(f"Job {job_spec['metadata']['name']} failed")
                     return "failed"
 
                 await asyncio.sleep(10)

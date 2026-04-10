@@ -116,7 +116,7 @@ def repo_id(repo_url: str) -> str:
     # used to avoid name clashes in build jobs, deployments, as repo_url is too long for k8s resources, and slug may not be unique
     return uuid.uuid5(uuid.NAMESPACE_URL, repo_url).hex[:8]
 
-def list_bot_helm_deployments(namespace: str):
+def list_bot_helm_deployments(namespace: str) -> list[str]:
     res = sp.check_output(["helm", "-n", namespace, "list", "-l", "managed-by=mmodabot", "-o", "json"])
     return [x['name'] for x in json.loads(res)]
 

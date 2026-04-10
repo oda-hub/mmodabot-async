@@ -47,7 +47,7 @@ class HelmDeployer:
         
         if mmoda_external_resources:
             values['extraEnv'] = []
-            for name, resource in mmoda_external_resources:
+            for name, resource in mmoda_external_resources.items():
                 secret_name = f"{self.project_slug}-{self.repo_id}-{name}"
                 secret_is_defined = self.k8interface.verify_secret(secret_name=secret_name)
                 if resource["required"] and not secret_is_defined:
@@ -149,6 +149,7 @@ class HelmDeployer:
         if len(json.loads(res)) == 1:
             logger.warning(f"Can't rollback the first release of {release_name}, uninstalling.")
             self.remove()
+            return DeploymentStatus.ROLLED_BACK
 
         res = sp.run(["helm", "-n", self.config.namespace, "rollback", release_name], stderr=sys.stderr, stdout=sys.stdout)
         if res.returncode != 0:
@@ -162,4 +163,5 @@ class HelmDeployer:
         release_name = self._release_name()
         res = sp.run(["helm", "-n", self.config.namespace, "uninstall", release_name], stderr=sp.PIPE, stdout=sys.stdout)
         res.check_returncode()
+        logger.info(f"Uninstalled release {release_name}")
 
