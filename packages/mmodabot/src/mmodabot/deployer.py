@@ -68,8 +68,8 @@ class HelmDeployer:
         return values
 
     def deploy(self, image_tag: str, commit: CommitType, mmoda_external_resources: dict = {}) -> DeploymentStatus:
-        if self.config.backend_deployer["mechanism"] != "helm-cli":
-            logger.error(f"Unsupported backend_deployer mechanism: {self.config.backend_deployer['mechanism']}")
+        if self.config.backend_deployer.mechanism != "helm-cli":
+            logger.error(f"Unsupported backend_deployer mechanism: {self.config.backend_deployer.mechanism}")
             raise NotImplementedError("Only helm cli deployment is implemented.")
 
         logger.info(f"Deploy called for {self.target_image_base}:{image_tag} on {self._release_name()}")
@@ -80,7 +80,7 @@ class HelmDeployer:
             inj_values_fn = os.path.join(tmpd, "inj-values.yaml")
 
             with open(extra_values_fn, "w") as fd:
-                extra_values = yaml.dump(self.config.backend_deployer["values"])
+                extra_values = yaml.dump(self.config.backend_deployer.values)
                 fd.write(extra_values)
 
             with open(inj_values_fn, "w") as fd:
@@ -99,7 +99,7 @@ class HelmDeployer:
                 "--values", extra_values_fn,
                 "--values", inj_values_fn,
                 release_name,
-                str(self.config.backend_deployer["helm_chart"])
+                str(self.config.backend_deployer.helm_chart)
             ]
 
             diff = sp.check_output(diff_args)
@@ -117,11 +117,11 @@ class HelmDeployer:
                 "-l", "managed-by=mmodabot",
                 #"--rollback-on-failure", # manually for better reporting
                 "--wait",
-                f"--timeout={self.config.backend_deployer['timeout']}",
+                f"--timeout={self.config.backend_deployer.timeout}",
                 "--values", extra_values_fn,
                 "--values", inj_values_fn,
                 release_name,
-                str(self.config.backend_deployer["helm_chart"])
+                str(self.config.backend_deployer.helm_chart)
             ]
 
             res = sp.run(args, stderr=sys.stderr, stdout=sys.stdout)

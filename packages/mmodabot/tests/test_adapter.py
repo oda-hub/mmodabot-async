@@ -24,8 +24,9 @@ class TestNBRepoAdapter:
     async def test_react_repo_change_all_success(self, adapter, mock_commit):
         """Test full flow: build succeeds, deploy succeeds"""
         # Enable all components
-        adapter.config.registrar['enabled'] = True
-        adapter.config.frontend_controller = {'enabled': True, 'url': 'http://frontend:8181'}
+        adapter.config.registrar.enabled = True
+        adapter.config.frontend_controller.enabled = True
+        adapter.config.frontend_controller.url = 'http://frontend:8181'
         
         with patch.object(adapter.builder, 'image_exists', new_callable=AsyncMock, return_value=False), \
              patch.object(adapter.builder, 'build', new_callable=AsyncMock, return_value=BuildStatus.SUCCEEDED), \
@@ -41,8 +42,9 @@ class TestNBRepoAdapter:
     async def test_react_repo_change_image_exists_skip_build(self, adapter, mock_commit):
         """Test when image already exists, skip build and deploy"""
         # Enable frontend controller and registrar
-        adapter.config.registrar['enabled'] = True
-        adapter.config.frontend_controller = {'enabled': True, 'url': 'http://frontend:8181'}
+        adapter.config.registrar.enabled = True
+        adapter.config.frontend_controller.enabled = True
+        adapter.config.frontend_controller.url = 'http://frontend:8181'
         
         with patch.object(adapter.builder, 'image_exists', new_callable=AsyncMock, return_value=True), \
              patch.object(adapter, 'register_mmoda_backend', new_callable=AsyncMock, return_value=RepoChangeStatus.REGISTERED) as mock_reg, \
@@ -89,7 +91,7 @@ class TestNBRepoAdapter:
     @pytest.mark.asyncio
     async def test_react_repo_change_builder_disabled_no_action(self, adapter, mock_commit):
         """Test when builder disabled and image doesn't exist"""
-        adapter.config.builder["enabled"] = False
+        adapter.config.builder.enabled = False
 
         with patch.object(adapter.builder, 'image_exists', new_callable=AsyncMock, return_value=False):
             result = await adapter.react_repo_change("main", mock_commit)
@@ -107,7 +109,6 @@ class TestNBRepoAdapter:
     @pytest.mark.asyncio
     async def test_register_mmoda_backend_success(self, adapter, mock_commit):
         """Test successful backend registration"""
-        adapter.config.registrar = {"url": "http://registrar.example.com"}
         adapter.config.namespace = "test-namespace"
         mock_commit.committed_date = "2023-01-01T00:00:00Z"
 
@@ -139,7 +140,6 @@ class TestNBRepoAdapter:
     @pytest.mark.asyncio
     async def test_register_mmoda_backend_failure(self, adapter, mock_commit):
         """Test backend registration failure"""
-        adapter.config.registrar = {"url": "http://registrar.example.com"}
 
         with patch.object(adapter.deployer, 'get_deployment_details', return_value={"manifests": []}), \
              patch('aiohttp.ClientSession') as mock_session_class:
@@ -170,7 +170,6 @@ class TestNBRepoAdapter:
     @pytest.mark.asyncio
     async def test_update_frontend_module_success(self, adapter, mock_commit):
         """Test successful frontend module update"""
-        adapter.config.frontend_controller = {"url": "http://frontend.example.com"}
 
         with patch.object(adapter, 'generate_help_html', new_callable=AsyncMock, return_value="<html>help</html>"), \
              patch.object(adapter, 'generate_acknowledgement', new_callable=AsyncMock, return_value="acknowledgement text"), \

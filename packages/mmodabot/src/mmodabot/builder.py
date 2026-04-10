@@ -37,7 +37,7 @@ class ImageBuilder:
             self.repo_credentials = self.k8interface.read_secret(
                 self.git_token_secret_name)[self.git_token_secret_key]
 
-        if self.config.builder["enabled"] and self.registry_secret_name is None:
+        if self.config.builder.enabled and self.registry_secret_name is None:
             raise RuntimeError(
                 f"Registry secret is not defined for {self.target_image_base} but is required by builder.")
 
@@ -58,14 +58,14 @@ class ImageBuilder:
         return f"{self.repo_id}-{image_tag[:8]}"
 
     async def prepare_job_spec(self, git_ref: str, target_image_tag: str, commit_id: str | None = None):
-        job_yaml = yaml.safe_load(self.config.builder["job_tmpl"])
+        job_yaml = yaml.safe_load(self.config.builder.job_tmpl)
         job_yaml.update({"metadata": {"name": f"bld-{self.repo_id}-{target_image_tag[:8]}"}})
         container = job_yaml["spec"]["template"]["spec"]["containers"][0]
 
         container["args"] += [
             f"--destination={self.target_image_base}:{target_image_tag}",
             f"--build-arg=REPO_URL={self.repo_url}",
-            f"--build-arg=NB2W_VER={self.config.builder['nb2w_version_spec']}"
+            f"--build-arg=NB2W_VER={self.config.builder.nb2w_version_spec}"
         ]
 
         if git_ref != "HEAD":

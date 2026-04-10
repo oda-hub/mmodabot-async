@@ -4,9 +4,10 @@ from mmodabot.main import Controller
 
 
 class TestController:
+    @patch('subprocess.check_output', return_value=b'[]')
     @patch('mmodabot.main.GitServerInterface')
     @patch('mmodabot.main.NBRepoAdapter')
-    def test_controller_initialization(self, mock_adapter_class, mock_git_class, mock_config_controller, mock_k8interface):
+    def test_controller_initialization(self, mock_adapter_class, mock_git_class, mock_check_output, mock_config_controller, mock_k8interface):
         """Test Controller initialization"""
         mock_git_instance = MagicMock()
         mock_git_class.return_value = mock_git_instance
@@ -25,9 +26,10 @@ class TestController:
         mock_git_class.assert_called_once()
         assert len(controller.group_interfaces) == 1
 
+    @patch('subprocess.check_output', return_value=b'[]')
     @patch('mmodabot.main.GitServerInterface')
     @patch('mmodabot.main.NBRepoAdapter')
-    def test_controller_initialization_with_repo_credentials(self, mock_adapter_class, mock_git_class, mock_config_controller, mock_k8interface):
+    def test_controller_initialization_with_repo_credentials(self, mock_adapter_class, mock_git_class, mock_check_output, mock_config_controller, mock_k8interface):
         """Test Controller initialization reads repo credentials"""
         mock_git_instance = MagicMock()
         mock_git_class.return_value = mock_git_instance
@@ -37,9 +39,10 @@ class TestController:
         # Check that secret was read for group token
         mock_k8interface.read_secret.assert_called_once_with('mmoda-dev-group-token')
 
+    @patch('subprocess.check_output', return_value=b'[]')
     @patch('mmodabot.main.GitServerInterface')
     @patch('mmodabot.main.NBRepoAdapter')
-    def test_controller_initialization_group_interface_creation(self, mock_adapter_class, mock_git_class, mock_config_controller, mock_k8interface):
+    def test_controller_initialization_group_interface_creation(self, mock_adapter_class, mock_git_class, mock_check_output, mock_config_controller, mock_k8interface):
         """Test group interface creation during initialization"""
         mock_git_instance = MagicMock()
         mock_git_class.return_value = mock_git_instance
@@ -48,13 +51,14 @@ class TestController:
 
         # Check GitServerInterface was created with correct parameters
         mock_git_class.assert_called_once_with(
-            'https://gitlab.in2p3.fr/',
+            'https://gitlab.example.fr/',
             token=None
         )
 
+    @patch('subprocess.check_output', return_value=b'[]')
     @patch('mmodabot.main.GitServerInterface')
     @patch('mmodabot.main.NBRepoAdapter')
-    def test_controller_cleanup_on_init_failure(self, mock_adapter_class, mock_git_class, mock_config_controller, mock_k8interface):
+    def test_controller_cleanup_on_init_failure(self, mock_adapter_class, mock_git_class, mock_check_output, mock_config_controller, mock_k8interface):
         """Test cleanup is called when initialization fails"""
         mock_git_class.side_effect = Exception("Init failed")
 
@@ -64,9 +68,10 @@ class TestController:
 
             mock_cleanup.assert_called_once()
 
+    @patch('subprocess.check_output', return_value=b'[]')
     @patch('mmodabot.main.GitServerInterface')
     @patch('mmodabot.main.NBRepoAdapter')
-    def test_controller_cleanup_method(self, mock_adapter_class, mock_git_class, mock_config_controller, mock_k8interface):
+    def test_controller_cleanup_method(self, mock_adapter_class, mock_git_class, mock_check_output, mock_config_controller, mock_k8interface):
         """Test cleanup method"""
         mock_git_instance = MagicMock()
         mock_git_class.return_value = mock_git_instance
@@ -84,22 +89,23 @@ class TestController:
         mock_task.cancel.assert_not_called()
 
     @patch('mmodabot.main.gitlab_instance_url_from_full_url')
+    @patch('subprocess.check_output', return_value=b'[]')
     @patch('mmodabot.main.GitServerInterface')
     @patch('mmodabot.main.NBRepoAdapter')
-    def test_initialize_group_interfaces(self, mock_adapter_class, mock_git_class, mock_gitlab_url_func, mock_config_controller, mock_k8interface):
+    def test_initialize_group_interfaces(self, mock_adapter_class, mock_git_class, mock_check_output, mock_gitlab_url_func, mock_config_controller, mock_k8interface):
         """Test group interfaces initialization"""
-        mock_gitlab_url_func.return_value = "https://gitlab.in2p3.fr/"
+        mock_gitlab_url_func.return_value = "https://gitlab.example.fr/"
         mock_git_instance = MagicMock()
         mock_git_class.return_value = mock_git_instance
 
         # Remove explicit gitlab_base from fixture so fallback is exercised
-        mock_config_controller.monitor['groups']['https://gitlab.in2p3.fr/mmoda/dev'].pop('gitlab_base', None)
+        mock_config_controller.monitor.groups[0].gitlab_base = None
 
         controller = Controller(mock_config_controller, mock_k8interface)
 
         # Check that gitlab_instance_url_from_full_url was called
-        mock_gitlab_url_func.assert_called_once_with('https://gitlab.in2p3.fr/mmoda/dev')
+        mock_gitlab_url_func.assert_called_once_with('https://gitlab.example.fr/mmoda/dev')
 
         # Check group interface was stored
-        assert 'https://gitlab.in2p3.fr/mmoda/dev' in controller.group_interfaces
-        assert controller.group_interfaces['https://gitlab.in2p3.fr/mmoda/dev'] == mock_git_instance
+        assert 'https://gitlab.example.fr/mmoda/dev' in controller.group_interfaces
+        assert controller.group_interfaces['https://gitlab.example.fr/mmoda/dev'] == mock_git_instance

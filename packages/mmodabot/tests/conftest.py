@@ -17,10 +17,12 @@ def mock_config():
     """Create complete mock config for NBRepoAdapter and other components"""
     config = MagicMock()
     config.namespace = "default"
-    config.builder = {
-        "enabled": True,
-        "nb2w_version_spec": "1.0.0",
-        "job_tmpl": """
+    
+    # Builder config
+    config.builder = MagicMock()
+    config.builder.enabled = True
+    config.builder.nb2w_version_spec = "1.0.0"
+    config.builder.job_tmpl = """
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -38,16 +40,24 @@ spec:
         secret:
           secretName: test-secret
 """
-    }
-    config.backend_deployer = {
-        "mechanism": "helm-cli",
-        "values": {},
-        "timeout": "5m",
-        "helm_chart": "/chart",
-        "enabled": True
-    }
-    config.registrar = {"enabled": False}
-    config.frontend_controller = {"enabled": False}
+    
+    # Backend deployer config
+    config.backend_deployer = MagicMock()
+    config.backend_deployer.mechanism = "helm-cli"
+    config.backend_deployer.values = {}
+    config.backend_deployer.timeout = "5m"
+    config.backend_deployer.helm_chart = "/chart"
+    config.backend_deployer.enabled = True
+    
+    # Registrar config
+    config.registrar = MagicMock()
+    config.registrar.enabled = False
+    config.registrar.url = "http://example:8888"
+    
+    # Frontend controller config
+    config.frontend_controller = MagicMock()
+    config.frontend_controller.enabled = False
+    config.frontend_controller.url = "http://example:8888"
     
     # Hash base mock
     hash_base = MagicMock()
@@ -62,10 +72,12 @@ spec:
 def mock_config_builder_only():
     """Mock config for testing builder component only"""
     config = MagicMock()
-    config.builder = {
-        "enabled": True,
-        "nb2w_version_spec": "1.0.0",
-        "job_tmpl": """
+    
+    # Builder config
+    config.builder = MagicMock()
+    config.builder.enabled = True
+    config.builder.nb2w_version_spec = "1.0.0"
+    config.builder.job_tmpl = """
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -83,7 +95,8 @@ spec:
         secret:
           secretName: test-secret
 """
-    }
+    
+    # Hash base mock
     hash_base_mock = MagicMock()
     hash_base_mock.hexdigest.return_value = "test-tag"
     config.hash_base = hash_base_mock
@@ -96,13 +109,15 @@ def mock_config_deployer_only():
     """Mock config for testing deployer component only"""
     config = MagicMock()
     config.namespace = "default"
-    config.backend_deployer = {
-        "mechanism": "helm-cli",
-        "values": {"test": "value"},
-        "timeout": "5m",
-        "helm_chart": "/chart",
-        "enabled": True
-    }
+    
+    # Backend deployer config
+    config.backend_deployer = MagicMock()
+    config.backend_deployer.mechanism = "helm-cli"
+    config.backend_deployer.values = {"test": "value"}
+    config.backend_deployer.timeout = "5m"
+    config.backend_deployer.helm_chart = "/chart"
+    config.backend_deployer.enabled = True
+    
     return config
 
 
@@ -111,18 +126,19 @@ def mock_config_controller():
     """Mock config for testing controller"""
     config = MagicMock()
     config.namespace = "test-namespace"
-    config.monitor = {
-        'groups': {
-            'https://gitlab.in2p3.fr/mmoda/dev': {
-                'gitlab_base': 'https://gitlab.in2p3.fr/',
-                'git_token_secret_name': 'mmoda-dev-group-token',
-                'git_token_secret_key': 'token',
-                'registry_secret_name': 'mmoda-group-registry-token',
-                'target_image_base_tmpl': 'gitlab-registry.in2p3.fr/mmoda/dev/{slug}'
-            }
-        },
-        'repos': {}
-    }
+    
+    # Monitor config
+    config.monitor = MagicMock()
+    mock_group_conf = MagicMock()
+    mock_group_conf.url = 'https://gitlab.example.fr/mmoda/dev'
+    mock_group_conf.gitlab_base = 'https://gitlab.example.fr/'
+    mock_group_conf.git_token_secret_name = 'mmoda-dev-group-token'
+    mock_group_conf.git_token_secret_key = 'token'
+    mock_group_conf.registry_secret_name = 'mmoda-group-registry-token'
+    mock_group_conf.target_image_base_tmpl = 'gitlab-registry.example.fr/mmoda/dev/{slug}'
+    config.monitor.groups = [mock_group_conf]
+    config.monitor.repos = {}
+    
     config.builder = MagicMock()
     config.backend_deployer = MagicMock()
     return config

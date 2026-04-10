@@ -5,7 +5,6 @@ from mmodabot.git_interface import GitServerInterface
 from mmodabot.repo_adapter import NBRepoAdapter
 from mmodabot.k8s_interface import K8SInterface
 from mmodabot.config import Config
-from mmodabot.notifier import LoggingNotificationHandler
 from mmodabot.utils import gitlab_instance_url_from_full_url, list_bot_helm_deployments, repo_id
 
 
@@ -14,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class Controller:
     # TODO: more typing, e.g. dictionaries; also Config 
-    def __init__(self, config, k8interface: K8SInterface):
+    def __init__(self, config: Config, k8interface: K8SInterface):
         try:
             self.config = config
             self.namespace = self.config.namespace
@@ -22,7 +21,7 @@ class Controller:
 
             self._prepare_builder()
 
-            self.notifier=LoggingNotificationHandler() # TODO: config
+            self.notifier=self.config.composite_notifier
             
             self.repo_registry = {} # repo_url -> (NBRepoAdapter, task) | None
             self._inititalize_repo_registry()
@@ -34,12 +33,13 @@ class Controller:
             raise
 
     def _initialize_group_interfaces(self):
-        for group_url, group_conf in self.config.monitor['groups'].items():
-            repo_credentials = None
-            git_token_secret_name = group_conf.get('git_token_secret_name')
-            git_token_secret_key = group_conf.get('git_token_secret_key')
-            gitlab_base = group_conf.get('gitlab_base')
+        for group_conf in self.config.monitor.groups:
+            group_url = str(group_conf.url)
+            git_token_secret_name = group_conf.git_token_secret_name
+            git_token_secret_key = group_conf.git_token_secret_key
+            gitlab_base = group_conf.gitlab_base
 
+            repo_credentials = None
             if git_token_secret_name and git_token_secret_key:
                 self.repo_credentials = self.k8interface.read_secret(
                     git_token_secret_name)[git_token_secret_key]
@@ -47,7 +47,7 @@ class Controller:
             if gitlab_base is None:
                 gitlab_base = gitlab_instance_url_from_full_url(group_url)
             git = GitServerInterface(
-                gitlab_base,
+                str(gitlab_base),
                 token = repo_credentials,
                 )
             self.group_interfaces[group_url] = git
@@ -86,7 +86,7 @@ class Controller:
 
 
     def _prepare_builder(self):
-        dockerfile = self.config.builder['dockerfile_content']
+        dockerfile = self.config.builder.dockerfile_content
         self.k8interface.create_cm("backend-builder-dockerfile", {"Dockerfile": dockerfile})
 
     async def _projects_to_deploy_in_gitlab_group(
@@ -103,7 +103,7 @@ class Controller:
             if project.marked_for_deletion_on or project.archived:
                 continue
             
-            if set(project.topics) & set(self.config.monitor['triggering_topics']):
+            if set(project.topics) & set(self.config.monitor.triggering_topics):
                 projects_set.add(project.http_url_to_repo)
 
         return projects_set
@@ -113,12 +113,12 @@ class Controller:
             projects_to_deploy = {}
             mapping= {}
             for group_url in self.group_interfaces:
-                group_conf = self.config.monitor['groups'][group_url]
-                git_token_secret_name = group_conf.get('git_token_secret_name')
-                git_token_secret_key = group_conf.get('git_token_secret_key')
-                target_image_base_tmpl = group_conf.get('target_image_base_tmpl')
-                registry_secret_name = group_conf.get('registry_secret_name')
-                gitlab_base = group_conf.get('gitlab_base')
+                group_conf = self.config.monitor.groups[group_url]
+                git_token_secret_name = group_conf.git_token_secret_name
+                git_token_secret_key = group_conf.git_token_secret_key
+                target_image_base_tmpl = group_conf.target_image_base_tmpl
+                registry_secret_name = group_conf.registry_secret_name
+                gitlab_base = group_conf.gitlab_base
 
                 ptd_in_group = await self._projects_to_deploy_in_gitlab_group(group_url=group_url)
                 for prj in ptd_in_group:
@@ -135,15 +135,16 @@ class Controller:
                     }
                     mapping[repo_id(prj)] = prj
 
-            for prj, prj_conf in self.config.monitor['repos'].items():
-                git_token_secret_name = prj_conf.get('git_token_secret_name')
-                git_token_secret_key = prj_conf.get('git_token_secret_key')
-                target_image_base_tmpl = prj_conf.get('target_image_base')
-                registry_secret_name = prj_conf.get('registry_secret_name')
-                gitlab_base = prj_conf.get('gitlab_base')
+            for prj_conf in self.config.monitor.repos:
+                proj_url = str(prj_conf.url)
+                git_token_secret_name = prj_conf.git_token_secret_name
+                git_token_secret_key = prj_conf.git_token_secret_key
+                target_image_base_tmpl = prj_conf.target_image_base
+                registry_secret_name = prj_conf.registry_secret_name
+                gitlab_base = prj_conf.gitlab_base
 
-                projects_to_deploy[prj] = {
-                    'repo_url': prj,
+                projects_to_deploy[proj_url] = {
+                    'repo_url': proj_url,
                     'target_image_base_tmpl': target_image_base_tmpl,
                     'config': self.config,
                     'k8interface': self.k8interface,
@@ -153,7 +154,7 @@ class Controller:
                     'git_token_secret_key': git_token_secret_key,
                     'notifier': self.notifier
                 }
-                mapping[repo_id(prj)] = prj
+                mapping[repo_id(proj_url)] = proj_url
 
             await self._update_repoid_mapping(mapping=mapping)
 
@@ -200,7 +201,7 @@ class Controller:
     async def monitor_projects(self):
         while True:
             await self._update_round()
-            await asyncio.sleep(self.config.monitor['groups_poll_timeout'])
+            await asyncio.sleep(self.config.monitor.groups_poll_timeout)
 
     
     def _cleanup(self):
@@ -209,6 +210,7 @@ class Controller:
 
 
 async def main():
+    # TODO: config from file
     config = Config()
 
     k8interface = K8SInterface(namespace=config.namespace) # TODO: configure concurrency 

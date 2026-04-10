@@ -127,7 +127,7 @@ class NBRepoAdapter:
                     repo_url=self.repo_url,
                     commit=commit,
                     image_tag=target_image_tag,
-                    data={'logs': logs, 'dockerfile': self.config.builder['dockerfile_content']})
+                    data={'logs': logs, 'dockerfile': self.config.builder.dockerfile_content})
                 return status
             if status == BuildStatus.CANCELLED:
                 self.notifier.on_build_cancelled(repo_url=self.repo_url, commit=commit, image_tag=target_image_tag)
@@ -151,7 +151,7 @@ class NBRepoAdapter:
             logger.info(f"Image {self.target_image_base}:{target_tag} exists in registry.")
             return target_tag
 
-        if self.config.builder['enabled']:
+        if self.config.builder.enabled:
 
             status = await self.build_mmoda_backend(
                 git_ref=git_ref,
@@ -220,7 +220,7 @@ class NBRepoAdapter:
                     "creative_work_status": self.creative_work_status
                 }
 
-                async with session.post(self.config.registrar['url'], json=payload) as resp:
+                async with session.post(str(self.config.registrar.url), json=payload) as resp:
                     if resp.status == 201:
                         self.notifier.on_backend_registered(repo_url=self.repo_url, commit=commit)
                         return RepoChangeStatus.REGISTERED
@@ -233,7 +233,7 @@ class NBRepoAdapter:
 
     async def unregister_mmoda_backend(self):
         async with aiohttp.ClientSession() as session:
-            async with session.delete(self.config.registrar['url'], params={"repo": self.repo_url}) as resp:
+            async with session.delete(str(self.config.registrar.url), params={"repo": self.repo_url}) as resp:
                 if resp.status == 200:
                     logger.info(f"Successfully unregistered {self.repo_url} from KG.")
                     return True
@@ -288,12 +288,12 @@ class NBRepoAdapter:
                 "acknowledgement": acknowledgement
             }
             try:
-                async with session.post(self.config.frontend_controller['url'], json=payload) as resp:
+                async with session.post(str(self.config.frontend_controller.url), json=payload) as resp:
                     if resp.status == 202:
                         job_id = (await resp.json())["job_id"]
                         while True:
                             await asyncio.sleep(5)
-                            async with session.get(f"{self.config.frontend_controller['url']}/jobs/{job_id}") as status_resp:
+                            async with session.get(f"{self.config.frontend_controller.url}/jobs/{job_id}") as status_resp:
                                 if status_resp.status == 200:
                                     status_data = await status_resp.json()
                                     if status_data["status"] == "done":
@@ -319,7 +319,7 @@ class NBRepoAdapter:
         # TODO: monitor the deletion job
         async with aiohttp.ClientSession() as session:
             try:
-                async with session.delete(f"{self.config.frontend_controller['url']}/{self.project_slug}") as resp:
+                async with session.delete(f"{self.config.frontend_controller.url}/{self.project_slug}") as resp:
                     if resp.status == 200:
                         logger.info(f"Successfully requested frontend to remove module for {self.repo_url}.")
                         return True
@@ -331,11 +331,11 @@ class NBRepoAdapter:
                 return False
 
     async def remove(self):
-        if self.config.frontend_controller['enabled']:
+        if self.config.frontend_controller.enabled:
             await self.remove_frontend_module()
-        if self.config.registrar['enabled']:
+        if self.config.registrar.enabled:
             await self.unregister_mmoda_backend()
-        if self.config.backend_deployer['enabled']:
+        if self.config.backend_deployer.enabled:
             await asyncio.to_thread(self.deployer.remove)
 
     async def react_repo_change(self, git_ref: str, commit: CommitType):
@@ -353,18 +353,18 @@ class NBRepoAdapter:
         if not result:
             return RepoChangeStatus.WAITING_IMAGE
 
-        if self.config.backend_deployer['enabled']:
+        if self.config.backend_deployer.enabled:
             target_tag = result
             result = await asyncio.to_thread(self.deploy_mmoda_backend, commit, target_tag)
             if result in [RepoChangeStatus.DEPLOY_FAILED, RepoChangeStatus.NO_ACTION]:
                 return result
 
-        if self.config.registrar['enabled']:
+        if self.config.registrar.enabled:
             result = await self.register_mmoda_backend(commit)
             if result == RepoChangeStatus.REGISTER_FAILED:
                 return RepoChangeStatus.REGISTER_FAILED
 
-        if self.config.frontend_controller['enabled']:
+        if self.config.frontend_controller.enabled:
             result = await self.update_frontend_module(commit)
 
             if result == RepoChangeStatus.FRONTEND_UPDATE_FAILED:
@@ -382,14 +382,14 @@ class NBRepoAdapter:
                     raise NotImplementedError(f"Monitoring {type} is not implemented.")
 
                 if self.state_store.get(latest_commit.id):
-                    await asyncio.sleep(self.config.monitor['repo_poll_timeout'])
+                    await asyncio.sleep(self.config.monitor.repo_poll_timeout)
                     continue
 
                 repo_change_result = await self.react_repo_change(ref, latest_commit)
                 if repo_change_result != RepoChangeStatus.WAITING_IMAGE:
                     self.state_store[latest_commit.id] = repo_change_result
 
-                await asyncio.sleep(self.config.monitor['repo_poll_timeout'])
+                await asyncio.sleep(self.config.monitor.repo_poll_timeout)
         except asyncio.CancelledError:
             logger.info(f'Repo {self.repo_url} monitoring stopped.')
             # TODO: Gaceful shutdown: Cancel build jobs? Any additional cleanups, waitings?
