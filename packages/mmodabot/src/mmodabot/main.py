@@ -231,7 +231,7 @@ async def main():
     argparser.add_argument("--config", type=str, default="mmodabot-config.toml", help="Path to configuration TOML file")
     args = argparser.parse_args()
 
-    config = Config().from_toml(args.config)
+    config = Config().from_toml_file(args.config)
 
     k8interface = K8SInterface(
         namespace=config.namespace, 

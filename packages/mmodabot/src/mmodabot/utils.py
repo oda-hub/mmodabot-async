@@ -40,7 +40,7 @@ def _parse_git_spec(version_spec: str) -> tuple[str, str]:
 
 def resolve_git_reference(repo_url: str, ref: str):
     # Discover references via Git Smart HTTP protocol
-    url = repo_url.rstrip("/") + "/info/refs?service=git-upload-pack"
+    url = repo_url.replace('.git', '').rstrip("/") + "/info/refs?service=git-upload-pack"
     response = requests.get(url, headers={"Accept": "application/x-git-upload-pack-advertisement"})
     if response.status_code != 200:
         raise RuntimeError(f"Failed to discover refs in {repo_url}. Git server response: {response}.")
@@ -183,9 +183,3 @@ def convert_help(text_md, url_base=''):
     return text_html
 # END: markdown helper
 
-
-if __name__ == "__main__":
-
-    # Example usage:
-    sha = resolve_git_reference("https://github.com/oda-hub/nb2workflow.git", "notexist")
-    print(sha)
