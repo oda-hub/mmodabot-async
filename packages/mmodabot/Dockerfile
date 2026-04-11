@@ -39,4 +39,5 @@ COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/linux-amd64/helm /usr/local/bin/helm
 COPY --from=builder /app/helm-plugins /usr/local/share/helm/plugins
 
-CMD ["/app/.venv/bin/mmodabot"]
+CMD ["/app/.venv/bin/mmodabot"]  
+# override to pass config

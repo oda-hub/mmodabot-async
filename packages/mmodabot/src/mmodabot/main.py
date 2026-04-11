@@ -228,10 +228,13 @@ class Controller:
 
 async def main():
     argparser = argparse.ArgumentParser(description="MMODA Bot")
-    argparser.add_argument("--config", type=str, default="mmodabot-config.toml", help="Path to configuration TOML file")
+    argparser.add_argument("--config", type=str, default="", help="Path to configuration TOML file")
     args = argparser.parse_args()
 
-    config = Config().from_toml(args.config)
+    if args.config:
+        config = Config().from_toml(args.config)
+    else:
+        config = Config()
 
     k8interface = K8SInterface(
         namespace=config.namespace, 
