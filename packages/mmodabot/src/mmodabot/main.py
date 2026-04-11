@@ -116,10 +116,14 @@ class Controller:
         
         projects_set = set()
         for project in project_iterator:
+            logger.debug(f"Project in group {group_url}: {project.http_url_to_repo}")
             if project.marked_for_deletion_on or project.archived:
+                logger.debug(f"Project {project.http_url_to_repo} is archived or marked for deletion.")
                 continue
             
+            logger.debug("Topics: project.topics")
             if set(project.topics) & set(self.config.monitor.triggering_topics):
+                logger.debug("Added to monitoring")
                 projects_set.add(project.http_url_to_repo)
 
         return projects_set

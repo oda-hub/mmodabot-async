@@ -5,8 +5,12 @@ import sentry_sdk
 from kubernetes import config as kube_config
 from sentry_sdk.integrations.logging import LoggingIntegration
 
+logging_level = logging.INFO
+if os.environ.get('MMODABOT_DEBUG'):
+    logging_level = logging.DEBUG
+
 logging.basicConfig(
-    level=logging.INFO, # TODO: configurable
+    level=logging_level, # TODO: configurable
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 

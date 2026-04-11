@@ -12,19 +12,12 @@ from collections.abc import Generator
 from contextlib import contextmanager,redirect_stderr,redirect_stdout
 from mmodabot.git_interface import GitServerInterface
 
-# If there is no git executable available, we still need to be able to load nb2workflow (the git cli functionality is not used here)
-os.environ['GIT_PYTHON_REFRESH'] = "quiet"
-from nb2workflow.nbadapter import NotebookAdapter
-
-
-
 logger = logging.getLogger()
 
 class TypedResources(TypedDict):
     resource: str
     required: bool
     env_vars: set[str]
-
 
 # https://stackoverflow.com/questions/11130156/suppress-stdout-stderr-print-from-python-functions
 @contextmanager
@@ -33,7 +26,6 @@ def suppress_stdout_stderr():
     with open(os.devnull, 'w') as fnull:
         with redirect_stderr(fnull) as err, redirect_stdout(fnull) as out:
             yield (err, out)
-
 
 @contextmanager
 def temporary_log_level(level):
@@ -44,6 +36,11 @@ def temporary_log_level(level):
         yield
     finally:
         logger.setLevel(original_level)
+
+with temporary_log_level(logging.ERROR):
+    # If there is no git executable available, we still need to be able to load nb2workflow (the git cli functionality is not used here)
+    os.environ['GIT_PYTHON_REFRESH'] = "quiet"
+    from nb2workflow.nbadapter import NotebookAdapter
 
 
 # yes, this is mostly copy-pasted from oda_api to avoid yet another heavy dependency
