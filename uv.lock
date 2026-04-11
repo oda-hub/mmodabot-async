@@ -927,7 +927,6 @@ version = "0.1.0"
 source = { editable = "packages/mmodabot" }
 dependencies = [
     { name = "aiohttp" },
-    { name = "gitpython" },
     { name = "kubernetes" },
     { name = "markdown" },
     { name = "markdown-katex" },
@@ -941,7 +940,6 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.13.4" },
-    { name = "gitpython", specifier = ">=3.1.46" },
     { name = "kubernetes", specifier = ">=35.0.0" },
     { name = "markdown", specifier = ">=3.10.2" },
     { name = "markdown-katex", specifier = ">=202406.1035" },
