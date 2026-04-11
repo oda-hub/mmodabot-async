@@ -2,7 +2,6 @@ import json
 import uuid
 import subprocess as sp
 import requests
-from git import Git, GitCommandError
 
 import os
 import re
