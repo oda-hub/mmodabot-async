@@ -1,0 +1,73 @@
+name: Lint and Test
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      packages: ${{ steps.filter.outputs.changes }}
+    steps:
+      - uses: actions/checkout@v6
+        if: github.event_name == 'push'
+
+      - name: Detect changes in packages
+        uses: dorny/paths-filter@v4
+        id: filter
+        
+        with:
+          filters: |
+            drupal-module-controller:
+              - 'packages/drupal-module-controller/**'
+
+            mmodabot:
+              - 'packages/mmodabot/**'
+
+            mmoda-kg-registrar:
+              - 'packages/mmoda-kg-registrar/**'
+  lint:
+      name: Lint with Ruff
+      runs-on: ubuntu-latest
+      needs: detect-changes
+      strategy:
+          matrix:
+              python-version: ["3.13"]
+              package: ${{ fromJSON(needs.detect-changes.outputs.packages) }}
+      steps:
+          - uses: actions/checkout@v6
+          - name: Set up uv
+            uses: astral-sh/setup-uv@v7
+            with:
+              version: "0.11.6"
+              python-version: ${{ matrix.python-version }}
+          - name: Install the project
+            run: uv sync --locked --all-extras --dev --project packages/${{ matrix.package }}
+          - name: Run ruff
+            run: uv run ruff check packages/${{ matrix.package }} --exclude tests
+            # continue-on-error: true
+  test:
+      name: Test with pytest
+      runs-on: ubuntu-latest
+      needs: 
+        - lint
+        - detect-changes
+      strategy:
+          matrix:
+              python-version: ["3.13"]
+              package: ${{ fromJSON(needs.detect-changes.outputs.packages) }}
+      steps:
+          - uses: actions/checkout@v6
+          - name: Set up uv
+            uses: astral-sh/setup-uv@v7
+            with:
+              version: "0.11.6"
+              python-version: ${{ matrix.python-version }}
+          - name: Install the project
+            run: uv sync --locked --all-extras --dev --project packages/${{ matrix.package }}
+          - name: Run tests
+            run: uv run pytest packages/${{ matrix.package }}/tests --cov --cov-report=xml

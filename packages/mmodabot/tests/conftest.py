@@ -1,5 +1,28 @@
+import os
+import tempfile
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+import yaml
+
+from unittest.mock import MagicMock, AsyncMock
+
+
+def pytest_configure():
+    kubeconfig = {
+        "apiVersion": "v1",
+        "clusters": [{"cluster": {"server": "https://mock-server:6443"}, "name": "mock-cluster"}],
+        "users": [{"name": "mock-user", "user": {"token": "mock-token"}}],
+        "contexts": [{"context": {"cluster": "mock-cluster", "user": "mock-user"}, "name": "mock-context"}],
+        "current-context": "mock-context",
+    }
+
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".yaml") as f:
+        yaml.dump(kubeconfig, f)
+        os.environ["KUBECONFIG"] = f.name
+
+def pytest_unconfigure():
+    kubeconfig_path = os.environ.get("KUBECONFIG")
+    if kubeconfig_path and os.path.exists(kubeconfig_path):
+        os.remove(kubeconfig_path)
 
 
 @pytest.fixture

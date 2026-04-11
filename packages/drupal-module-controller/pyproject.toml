@@ -20,12 +20,5 @@ dependencies = [
     "mmoda-tab-generator @ git+https://github.com/oda-hub/frontend-tab-generator.git",
 ]
 
-[dependency-groups]
-dev = [
-    "pytest",
-    "pytest-asyncio",
-    "httpx",
-]
-
 [project.scripts]
 "mmoda-drupal-module-controller" = "mmoda_drupal_module_controller.cli:run_api"

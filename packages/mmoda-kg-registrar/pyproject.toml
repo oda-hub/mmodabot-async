@@ -17,12 +17,6 @@ dependencies = [
     "uvicorn>=0.23.0",
 ]
 
-[dependency-groups]
-dev = [
-    "pytest>=9.0.2",
-    "httpx>=0.28.1",
-]
-
 [project.scripts]
 "mmoda-kg-registrar" = "mmoda_kg_registrar.cli:run_api"
 
