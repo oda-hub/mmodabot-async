@@ -82,4 +82,4 @@ jobs:
       steps:
           - name: Collect test results
             run: |
-              echo ${{ needs.test.outputs.status }}
+              echo ${{ toJSON(needs.test.outputs.status) }}
