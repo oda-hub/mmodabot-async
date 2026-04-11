@@ -51,4 +51,4 @@ pytest tests/
 
 ## License
 
-[Add license information here]
+MIT

@@ -7,6 +7,27 @@ from mmodabot.utils import (
 
 
 class TestUtils:
+
+    @pytest.fixture
+    def mock_requests_git_ref_success(self):
+        with patch('requests.get') as mock_get:
+            # Create a mock response
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_response.text = """\
+001e# service=git-upload-pack
+0000015b85cf57f171c007a60a052b11415984f2daf6279b HEADmulti_ack include-tag symref=HEAD:refs/heads/master filter object-format=sha1 agent=git/github-10b0b59c793c-Linux
+0040a9ad697497d05502c433c8bfc3167ac96c0e5c46 refs/heads/develop
+003f85cf57f171c007a60a052b11415984f2daf6279b refs/heads/master
+003f3904bd04108ff8f6b4d44529ef03c2d8074ce094 refs/tags/v1.3.20
+003f550d560dfa43e6d8c2904deb6cb293cf4b7ad871 refs/tags/v1.3.21
+0000"""
+
+            # Set the mock response
+            mock_get.return_value = mock_response
+            yield mock_get
+
+
     @patch('mmodabot.utils.requests.get')
     def test_get_pypi_package_info_success(self, mock_get):
         """Test successful PyPI package info retrieval"""
@@ -69,50 +90,49 @@ class TestUtils:
         assert url == "1.0.0"
         assert ref == ""
 
-    @patch('mmodabot.utils.Git')
-    def test_resolve_git_reference_success(self, mock_git_class):
-        """Test successful git reference resolution"""
-        mock_git = MagicMock()
-        mock_git.ls_remote.return_value = "abc123456789\trefs/heads/main\n"
-        mock_git_class.return_value = mock_git
+    def test_resolve_git_reference_head(self, mock_requests_git_ref_success):
+        """Test successful git reference resolution: HEAD"""
+        result = resolve_git_reference("https://github.com/user/repo.git", "HEAD")
 
-        result = resolve_git_reference("https://github.com/user/repo.git", "main")
+        assert result == "85cf57f171c007a60a052b11415984f2daf6279b"
+        mock_requests_git_ref_success.assert_called_once()
 
-        assert result == "abc123456789"
-        mock_git.ls_remote.assert_called_once_with("https://github.com/user/repo.git", "main")
+    def test_resolve_git_reference_branch(self, mock_requests_git_ref_success):
+        """Test successful git reference resolution: branch"""
+        result = resolve_git_reference("https://github.com/user/repo.git", "master")
 
-    @patch('mmodabot.utils.Git')
-    def test_resolve_git_reference_with_token(self, mock_git_class):
-        """Test git reference resolution with token"""
-        mock_git = MagicMock()
-        mock_git.ls_remote.return_value = "def987654321\trefs/tags/v1.0.0\n"
-        mock_git_class.return_value = mock_git
+        assert result == "85cf57f171c007a60a052b11415984f2daf6279b"
+        mock_requests_git_ref_success.assert_called_once()
 
-        result = resolve_git_reference("https://github.com/user/repo.git", "v1.0.0", "token123")
+    def test_resolve_git_reference_tag(self, mock_requests_git_ref_success):
+        """Test successful git reference resolution: tag"""
+        result = resolve_git_reference("https://github.com/user/repo.git", "v1.3.20")
 
-        assert result == "def987654321"
-        mock_git.ls_remote.assert_called_once_with("https://oauth2:token123@github.com/user/repo.git", "v1.0.0")
+        assert result == "3904bd04108ff8f6b4d44529ef03c2d8074ce094"
+        mock_requests_git_ref_success.assert_called_once()
 
-    @patch('mmodabot.utils.Git')
-    def test_resolve_git_reference_not_found(self, mock_git_class):
-        """Test git reference not found"""
-        mock_git = MagicMock()
-        mock_git.ls_remote.return_value = ""
-        mock_git_class.return_value = mock_git
+    def test_resolve_git_reference_not_exist(self, mock_requests_git_ref_success):
+        """Test wrong git reference resolution"""
+        with pytest.raises(RuntimeError) as e:
+            result = resolve_git_reference("https://github.com/user/repo.git", "spam")
+            assert e.value == "Ref spam not found in https://github.com/user/repo.git"
 
-        with pytest.raises(RuntimeError, match="Reference 'main' not found"):
-            resolve_git_reference("https://github.com/user/repo.git", "main")
+        mock_requests_git_ref_success.assert_called_once()
 
-    @patch('mmodabot.utils.Git')
-    def test_resolve_git_reference_command_error(self, mock_git_class):
-        """Test git command error"""
-        mock_git = MagicMock()
-        from git import GitCommandError
-        mock_git.ls_remote.side_effect = GitCommandError("git", "ls-remote failed")
-        mock_git_class.return_value = mock_git
+    @patch('mmodabot.utils.requests.get')
+    def test_resolve_git_reference_norepo(self, mock_get):
+        """Test git reference resolution: wrong repo"""
+        mock_response = MagicMock()
+        mock_response.status_code = 401
+        mock_response.text = "Repository not found."
 
-        with pytest.raises(RuntimeError, match="Git command failed"):
-            resolve_git_reference("https://github.com/user/repo.git", "main")
+        # Set the mock response
+        mock_get.return_value = mock_response
+        with pytest.raises(RuntimeError) as e:
+            result = resolve_git_reference("https://github.com/user/repo.git", "v1.3.20")
+            assert e.value.startswith("Failed to discover refs in https://github.com/user/repo.git.")
+        
+        mock_get.assert_called_once()
 
     @patch('mmodabot.utils.resolve_git_reference')
     def test_get_unique_spec_git_ref(self, mock_resolve):
@@ -124,14 +144,6 @@ class TestUtils:
         assert result == "abc123"
         mock_resolve.assert_called_once_with("https://github.com/user/repo.git", "main")
 
-    @patch('mmodabot.utils.resolve_git_reference')
-    def test_get_unique_spec_git_ref_with_token(self, mock_resolve):
-        """Test get_unique_spec with git reference and token"""
-        mock_resolve.return_value = "def456"
-
-        result = get_unique_spec("git+https://github.com/user/repo.git@v1.0.0")
-
-        assert result == "def456"
 
     def test_get_unique_spec_plain_version(self):
         """Test get_unique_spec with plain version"""
