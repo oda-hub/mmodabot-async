@@ -138,6 +138,7 @@ class Config(BaseSettings):
                     env_settings,
                     dotenv_settings
                 )
-            
+        if not Path(toml_path).is_file():
+            raise RuntimeError(f'No such file {toml_path}')
         logger.info(f"Loading config from toml file {toml_path}")        
         return SettingsFromFile()            
