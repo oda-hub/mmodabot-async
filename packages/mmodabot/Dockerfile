@@ -32,6 +32,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 FROM python:3.13-slim-trixie
 
+# nb2workflow needs git cli
+RUN apt-get update && apt-get install -y --no-install-recommends git && apt-get clean && rm -rf /var/lib/apt/lists/*
+
 RUN useradd -u 1000 -U -m bot
 
 COPY --from=builder /app/.venv /app/.venv
