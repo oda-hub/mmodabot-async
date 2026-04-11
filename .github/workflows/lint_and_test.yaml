@@ -35,9 +35,10 @@ jobs:
       runs-on: ubuntu-latest
       needs: detect-changes
       strategy:
-          matrix:
-              python-version: ["3.13"]
-              package: ${{ fromJSON(needs.detect-changes.outputs.packages) }}
+        fail-fast: false 
+        matrix:
+            python-version: ["3.13"]
+            package: ${{ fromJSON(needs.detect-changes.outputs.packages) }}
       steps:
           - uses: actions/checkout@v6
           - name: Set up uv
@@ -59,6 +60,7 @@ jobs:
       outputs:
         status: ${{ job.status }}
       strategy:
+          fail-fast: false
           matrix:
               python-version: ["3.13"]
               package: ${{ fromJSON(needs.detect-changes.outputs.packages) }}
@@ -74,12 +76,13 @@ jobs:
           - name: Run tests
             run: uv run pytest packages/${{ matrix.package }}/tests --cov --cov-report=xml
 
-  collect-results:
-      name: Collect results
-      runs-on: ubuntu-latest
-      needs:
-        - test
-      steps:
-          - name: Collect test results
-            run: |
-              echo ${{ toJSON(needs.test.outputs.status) }}
+  success:
+    name: Determine success
+    runs-on: ubuntu-latest
+    needs:
+      - test
+    if: always()
+    steps:
+        - name: Determine success
+          run: |
+            [ ${{ needs.test.outputs.status }} = "success" ]
