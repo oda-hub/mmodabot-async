@@ -232,7 +232,7 @@ async def main():
     args = argparser.parse_args()
 
     if args.config:
-        config = Config().from_toml(args.config)
+        config = Config().from_toml_file(args.config)
     else:
         config = Config()
 

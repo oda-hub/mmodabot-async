@@ -160,4 +160,4 @@ def get_kg_client() -> KGClient:
 
 ## License
 
-See LICENSE in the repository root.
+MIT

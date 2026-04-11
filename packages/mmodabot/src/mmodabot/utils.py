@@ -2,7 +2,6 @@ import json
 import uuid
 import subprocess as sp
 import requests
-from git import Git, GitCommandError
 
 import os
 import re
@@ -38,33 +37,27 @@ def _parse_git_spec(version_spec: str) -> tuple[str, str]:
 
     return url, ref
 
-def resolve_git_reference(url: str, ref: str, token: str|None = None) -> str:
-    try:
-        g = Git()
+def resolve_git_reference(repo_url: str, ref: str):
+    # Discover references via Git Smart HTTP protocol
+    url = repo_url.replace('.git', '').rstrip("/") + "/info/refs?service=git-upload-pack"
+    response = requests.get(url, headers={"Accept": "application/x-git-upload-pack-advertisement"})
+    if response.status_code != 200:
+        raise RuntimeError(f"Failed to discover refs in {repo_url}. Git server response: {response}.")
 
-        if token and url.startswith("https://"):
-            url = url.replace("https://", f"https://oauth2:{token}@")
+    # Parse the response to find the ref
+    lines = response.text.split("\n")
+    if ref == 'HEAD':
+        pattern = re.compile(r'^(0000)?[0-9a-f]{4}(?P<sha>[0-9a-f]{40}) HEAD')
+    else:
+        pattern = re.compile(r'^[0-9a-f]{4}(?P<sha>[0-9a-f]{40}) refs/(heads|tags)/'+ref+'$')
 
-        remote_refs = g.ls_remote(url, ref)
+    for line in lines:
+        if match := pattern.match(line):
+            sha = match.group('sha')
+            return sha
 
-        if not remote_refs.strip():
-            raise RuntimeError(f"Reference '{ref}' not found in {url}")
+    raise RuntimeError(f"Ref {ref} not found in {repo_url}")
 
-        # ls-remote may return multiple matches (e.g., tag + deref)
-        for line in remote_refs.splitlines():
-            sha, ref_name = line.split("\t", 1)
-
-            # Prefer exact matches
-            if ref_name.endswith(f"/{ref}") or ref_name == ref:
-                return sha
-
-        # Fallback: return first match
-        return remote_refs.splitlines()[0].split("\t")[0]
-
-    except GitCommandError as e:
-        raise RuntimeError(f"Git command failed for {url}@{ref}: {e}") from e
-    except Exception as e:
-        raise RuntimeError(f"Unexpected error resolving {url}@{ref}: {e}") from e
 
 def get_unique_spec(version_spec: str):
     """
@@ -188,3 +181,4 @@ def convert_help(text_md, url_base=''):
                          extension_configs = {'markdown_katex': {'insert_fonts_css': True}})
     return text_html
 # END: markdown helper
+
