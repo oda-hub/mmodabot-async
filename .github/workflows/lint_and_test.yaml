@@ -85,4 +85,5 @@ jobs:
     steps:
         - name: Determine success
           run: |
-            [ ${{ needs.test.outputs.status }} = "success" ]
+            [ "x${{ needs.test.outputs.status }}" = "xsuccess" ] || [ "x${{ needs.test.outputs.status }}" = "x" ]
+             # either success of all test job or all were skipped
