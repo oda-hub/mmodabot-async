@@ -11,14 +11,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl git
 
 ARG HELM_VERSION=v4.1.4
 
-ENV HELM_PLUGINS=/app/helm-plugins
-
 RUN <<EOF
 curl -O https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz
 curl -O https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz.sha256sum
 sha256sum -c helm-${HELM_VERSION}-linux-amd64.tar.gz.sha256sum
 tar xzf helm-${HELM_VERSION}-linux-amd64.tar.gz
-./linux-amd64/helm plugin install https://github.com/databus23/helm-diff --verify=false
+mv ./linux-amd64/helm /usr/local/bin/helm
+helm plugin install https://github.com/databus23/helm-diff --verify=false
 EOF
 
 
@@ -33,11 +32,15 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 FROM python:3.13-slim-trixie
 
-ENV HELM_PLUGINS=/usr/local/share/helm/plugins
+RUN useradd -u 1000 -U -m bot
 
 COPY --from=builder /app/.venv /app/.venv
-COPY --from=builder /app/linux-amd64/helm /usr/local/bin/helm
-COPY --from=builder /app/helm-plugins /usr/local/share/helm/plugins
+COPY --from=builder /usr/local/bin/helm /usr/local/bin/helm
+COPY --from=builder --chown=1000:1000 /root/.cache/helm /home/bot/.cache/helm
+COPY --from=builder --chown=1000:1000 /root/.local/share/helm /home/bot/.local/share/helm
+
+USER 1000
+WORKDIR /tmp
 
 CMD ["/app/.venv/bin/mmodabot"]  
 # override to pass config
