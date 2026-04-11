@@ -99,7 +99,11 @@ class Controller:
 
     def _prepare_builder(self):
         dockerfile = self.config.builder.dockerfile_content
-        self.k8interface.create_cm("backend-builder-dockerfile", {"Dockerfile": dockerfile}, raise_if_exists=True)
+        try:
+            self.k8interface.create_cm("backend-builder-dockerfile", {"Dockerfile": dockerfile}, raise_if_exists=True)
+        except RuntimeError:
+            logger.warning("Old Dockerfile configmap exists, overwriting")
+            self.k8interface.update_cm("backend-builder-dockerfile", {"Dockerfile": dockerfile})
 
     async def _projects_to_deploy_in_gitlab_group(
             self,

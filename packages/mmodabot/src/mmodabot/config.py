@@ -1,3 +1,4 @@
+import logging
 from functools import cached_property
 from importlib.resources import files
 import hashlib
@@ -10,6 +11,7 @@ from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, TomlConf
 import mmodabot.notifier as mmnt
 from mmodabot.utils import get_pypi_package_info, get_unique_spec
 
+logger = logging.getLogger()
 class GroupConfig(BaseModel):
     url: HttpUrl
     gitlab_base: HttpUrl | None = None
@@ -90,6 +92,7 @@ class Config(BaseSettings):
 
     def model_post_init(self, __context: Any) -> None:
         self._make_hash_base()
+        logger.debug(f"Configured with: {self.model_dump()}")
 
     def _make_hash_base(self):
         if self.builder.nb2w_version_spec:
@@ -135,5 +138,6 @@ class Config(BaseSettings):
                     env_settings,
                     dotenv_settings
                 )
-
+            
+        logger.info(f"Loading config from toml file {toml_path}")        
         return SettingsFromFile()            

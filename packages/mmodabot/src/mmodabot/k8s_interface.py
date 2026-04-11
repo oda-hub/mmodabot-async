@@ -53,9 +53,9 @@ class K8SInterface:
             logger.info(f"ConfigMap '{name}' created successfully.")
             return typing.cast(client.V1ConfigMap, cm)
         except client.ApiException as e:
-            logger.error(f"Failed to create ConfigMap '{name}': {e}")
             if e.status == 409 and raise_if_exists:
-                raise Exception(f"ConfigMap '{name}' already exists.")
+                raise RuntimeError(f"ConfigMap '{name}' already exists.")
+            logger.error(f"Failed to create ConfigMap '{name}': {e}")
 
     def update_cm(self, name: str, data: dict):
         try:
