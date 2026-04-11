@@ -10,10 +10,12 @@ import rdflib
 from typing import TypedDict
 from collections.abc import Generator
 from contextlib import contextmanager,redirect_stderr,redirect_stdout
+from mmodabot.git_interface import GitServerInterface
 
+# If there is no git executable available, we still need to be able to load nb2workflow (the git cli functionality is not used here)
+os.environ['GIT_PYTHON_REFRESH'] = "quiet"
 from nb2workflow.nbadapter import NotebookAdapter
 
-from mmodabot.git_interface import GitServerInterface
 
 
 logger = logging.getLogger()
