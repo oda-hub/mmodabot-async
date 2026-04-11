@@ -56,6 +56,8 @@ jobs:
       needs: 
         - lint
         - detect-changes
+      outputs:
+        status: ${{ job.status }}
       strategy:
           matrix:
               python-version: ["3.13"]
@@ -71,3 +73,13 @@ jobs:
             run: uv sync --locked --all-extras --dev --project packages/${{ matrix.package }}
           - name: Run tests
             run: uv run pytest packages/${{ matrix.package }}/tests --cov --cov-report=xml
+
+  collect-results:
+      name: Collect results
+      runs-on: ubuntu-latest
+      needs:
+        - test
+      steps:
+          - name: Collect test results
+            run: |
+              echo ${{ needs.test.outputs.status }}
