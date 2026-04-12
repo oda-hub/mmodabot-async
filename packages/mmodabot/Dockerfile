@@ -38,7 +38,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends git tini && apt
 
 RUN useradd -u 1000 -U -m bot
 
-COPY --from=builder /tini /tini
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /usr/local/bin/helm /usr/local/bin/helm
 COPY --from=builder --chown=1000:1000 /root/.cache/helm /home/bot/.cache/helm
