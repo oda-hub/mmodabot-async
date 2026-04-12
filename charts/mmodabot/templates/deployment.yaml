@@ -42,11 +42,18 @@ spec:
           {{- end }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          {{- if .Values.configToml }}
+          {{- with .Values.entrypointOverride }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if and .Values.configToml ( not .Values.argsOverride )}}
           args:
           - /app/.venv/bin/mmodabot
           - --config 
           - /app/mmodabot-config.toml
+          {{- end }}
+          {{- with .Values.argsOverride }}
+            {{- toYaml . | nindent 12 }}
           {{- end }}
           {{- with .Values.livenessProbe }}
           livenessProbe:
