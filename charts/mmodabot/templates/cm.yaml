@@ -1,0 +1,21 @@
+{{- if or .Values.configToml .Values.configOverrides }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "mmodabot.fullname" . }}-config
+  labels:
+    {{- include "mmodabot.labels" . | nindent 4 }}
+data:
+  {{- if .Values.configToml }}
+  mmodabot-config.toml: |
+    {{ .Values.configToml | nindent 4 }}
+  {{- end }}
+
+  {{- if .Values.configOverrides }}
+  {{- end }}
+
+  {{- with .Values.extraConfigOverrides }}
+    # Add any additional config overrides as separate keys in the ConfigMap
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
