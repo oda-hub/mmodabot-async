@@ -184,7 +184,7 @@ class Controller:
 
             projects_to_remove = set(self.repo_registry.keys()) - set(projects_to_deploy.keys())
 
-            logger.info(f'Projects to remove: {','.join(projects_to_remove)}')
+            logger.info(f'Projects to remove: {', '.join(projects_to_remove)}')
             for proj_url in projects_to_remove:
                 repo_in_registry = self.repo_registry[proj_url]
                 if repo_in_registry is None:
@@ -202,7 +202,7 @@ class Controller:
                 await adapter.remove()
                 self.repo_registry.pop(proj_url)
 
-            logger.info(f'Projects to monitor: {",".join(projects_to_deploy.keys())}')
+            logger.info(f'Projects to monitor: {", ".join(projects_to_deploy.keys())}')
             for proj_url, proj_kwargs in projects_to_deploy.items():
                 if self.repo_registry.get(proj_url):
                     logger.debug(f"Repo {proj_url} is already processing.")

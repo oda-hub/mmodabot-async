@@ -48,13 +48,3 @@ app.kubernetes.io/name: {{ include "mmoda-backend.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
-{{/*
-Create the name of the service account to use
-*/}}
-{{- define "mmoda-backend.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
-{{- default (include "mmoda-backend.fullname" .) .Values.serviceAccount.name }}
-{{- else }}
-{{- default "default" .Values.serviceAccount.name }}
-{{- end }}
-{{- end }}
