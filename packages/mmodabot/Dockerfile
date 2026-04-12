@@ -30,6 +30,11 @@ COPY . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --no-editable
 
+ENV TINI_VERSION=v0.19.0
+RUN curl -o /tini https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini
+RUN chmod +x /tini
+
+
 FROM python:3.13-slim-trixie
 
 # nb2workflow needs git cli
@@ -37,6 +42,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git && apt-get 
 
 RUN useradd -u 1000 -U -m bot
 
+COPY --from=builder /tini /tini
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /usr/local/bin/helm /usr/local/bin/helm
 COPY --from=builder --chown=1000:1000 /root/.cache/helm /home/bot/.cache/helm
@@ -45,5 +51,6 @@ COPY --from=builder --chown=1000:1000 /root/.local/share/helm /home/bot/.local/s
 USER 1000
 WORKDIR /tmp
 
+ENTRYPOINT ["/tini", "--"]
+
 CMD ["/app/.venv/bin/mmodabot"]  
-# override to pass config
