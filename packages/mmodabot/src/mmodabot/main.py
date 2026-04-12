@@ -99,7 +99,11 @@ class Controller:
 
     def _prepare_builder(self):
         dockerfile = self.config.builder.dockerfile_content
-        self.k8interface.create_cm("backend-builder-dockerfile", {"Dockerfile": dockerfile}, raise_if_exists=True)
+        try:
+            self.k8interface.create_cm("backend-builder-dockerfile", {"Dockerfile": dockerfile}, raise_if_exists=True)
+        except RuntimeError:
+            logger.warning("Old Dockerfile configmap exists, overwriting")
+            self.k8interface.update_cm("backend-builder-dockerfile", {"Dockerfile": dockerfile})
 
     async def _projects_to_deploy_in_gitlab_group(
             self,
@@ -112,10 +116,14 @@ class Controller:
         
         projects_set = set()
         for project in project_iterator:
+            logger.debug(f"Project in group {group_url}: {project.http_url_to_repo}")
             if project.marked_for_deletion_on or project.archived:
+                logger.debug(f"Project {project.http_url_to_repo} is archived or marked for deletion.")
                 continue
             
+            logger.debug("Topics: project.topics")
             if set(project.topics) & set(self.config.monitor.triggering_topics):
+                logger.debug("Added to monitoring")
                 projects_set.add(project.http_url_to_repo)
 
         return projects_set
@@ -176,7 +184,7 @@ class Controller:
 
             projects_to_remove = set(self.repo_registry.keys()) - set(projects_to_deploy.keys())
 
-            logger.info(f'Projects to remove: {','.join(projects_to_remove)}')
+            logger.info(f'Projects to remove: {', '.join(projects_to_remove)}')
             for proj_url in projects_to_remove:
                 repo_in_registry = self.repo_registry[proj_url]
                 if repo_in_registry is None:
@@ -194,7 +202,7 @@ class Controller:
                 await adapter.remove()
                 self.repo_registry.pop(proj_url)
 
-            logger.info(f'Projects to monitor: {",".join(projects_to_deploy.keys())}')
+            logger.info(f'Projects to monitor: {", ".join(projects_to_deploy.keys())}')
             for proj_url, proj_kwargs in projects_to_deploy.items():
                 if self.repo_registry.get(proj_url):
                     logger.debug(f"Repo {proj_url} is already processing.")

@@ -23,13 +23,19 @@ jobs:
         with:
           filters: |
             drupal-module-controller:
-              - 'packages/drupal-module-controller/**'
+              - 'packages/drupal-module-controller/src/**'
+              - 'packages/drupal-module-controller/tests/**'
+              - 'packages/drupal-module-controller/pyproject.toml'
 
             mmodabot:
-              - 'packages/mmodabot/**'
+              - 'packages/mmodabot/src/**'
+              - 'packages/mmodabot/tests/**'
+              - 'packages/mmodabot/pyproject.toml'
 
             mmoda-kg-registrar:
-              - 'packages/mmoda-kg-registrar/**'
+              - 'packages/mmoda-kg-registrar/src/**'
+              - 'packages/mmoda-kg-registrar/tests/**'
+              - 'packages/mmoda-kg-registrar/pyproject.toml'
   lint:
       name: Lint with Ruff
       runs-on: ubuntu-latest
@@ -85,4 +91,5 @@ jobs:
     steps:
         - name: Determine success
           run: |
-            [ ${{ needs.test.outputs.status }} = "success" ]
+            [ "x${{ needs.test.outputs.status }}" = "xsuccess" ] || [ "x${{ needs.test.outputs.status }}" = "x" ]
+             # either success of all test job or all were skipped

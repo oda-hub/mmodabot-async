@@ -10,10 +10,9 @@ import rdflib
 from typing import TypedDict
 from collections.abc import Generator
 from contextlib import contextmanager,redirect_stderr,redirect_stdout
+from mmodabot.git_interface import GitServerInterface
 
 from nb2workflow.nbadapter import NotebookAdapter
-
-from mmodabot.git_interface import GitServerInterface
 
 
 logger = logging.getLogger()
@@ -23,7 +22,6 @@ class TypedResources(TypedDict):
     required: bool
     env_vars: set[str]
 
-
 # https://stackoverflow.com/questions/11130156/suppress-stdout-stderr-print-from-python-functions
 @contextmanager
 def suppress_stdout_stderr():
@@ -31,7 +29,6 @@ def suppress_stdout_stderr():
     with open(os.devnull, 'w') as fnull:
         with redirect_stderr(fnull) as err, redirect_stdout(fnull) as out:
             yield (err, out)
-
 
 @contextmanager
 def temporary_log_level(level):
@@ -42,7 +39,6 @@ def temporary_log_level(level):
         yield
     finally:
         logger.setLevel(original_level)
-
 
 # yes, this is mostly copy-pasted from oda_api to avoid yet another heavy dependency
 ontology_path = "https://odahub.io/ontology/ontology.ttl" # TODO: hardcoded

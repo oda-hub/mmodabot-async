@@ -1,13 +1,10 @@
-# Default values for mmoda-backend.
+# Default values for mmodabot.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-# This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
-replicaCount: 1
-
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
-  repository: placeholder
+  repository: ghcr.io/oda-hub/mmodabot-async-mmodabot
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
@@ -19,6 +16,18 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
+# This section builds out the service account more information can be found here: https://kubernetes.io/docs/concepts/security/service-accounts/
+serviceAccount:
+  # Annotations to add to the service account.
+  annotations: {}
+  # The name of the service account to use.
+  # If not set, a name is generated using the fullname template.
+  name: ""
+
+# The RBAC to bind
+rbac:
+  # If not set, a name is generated using the fullname template.
+  roleName: ""
 
 # This is for setting Kubernetes Annotations to a Pod.
 # For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
@@ -27,8 +36,8 @@ podAnnotations: {}
 # For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
 podLabels: {}
 
-podSecurityContext:
-  fsGroup: 57439 #mambauser
+podSecurityContext: {}
+  # fsGroup: 1000
 
 securityContext:
   capabilities:
@@ -36,14 +45,7 @@ securityContext:
     - ALL
   # readOnlyRootFilesystem: true
   runAsNonRoot: true
-  runAsUser: 57439
-
-# This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
-service:
-  # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
-  type: ClusterIP
-  # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
-  port: 8000
+  runAsUser: 1000
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
@@ -58,38 +60,24 @@ resources: {}
   #   memory: 128Mi
 
 # This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
-livenessProbe:
-  initialDelaySeconds: 10
-  periodSeconds: 10
-  httpGet:
-    path: /
-    port: http
-
-# This is for setting up a predefined PVC
-pvc:
-  enabled: false
-  storageClassName: ""
-  accessMode: ReadWriteOnce
-  size: 10Gi
-  mountPath: /tmp
-
-# This is for setting ephemeral storage
-ephemeralStorage:
-  enabled: false
-  storageClassName: ""
-  size: 20Gi
-  accessMode: ReadWriteOnce
-  mountPath: /tmp
+# livenessProbe:
+#   httpGet:
+#     path: /
+#     port: http
+# readinessProbe:
+#   httpGet:
+#     path: /
+#     port: http
 
 # Additional volumes on the output Deployment definition.
-extraVolumes: []
+volumes: []
   # - name: foo
   #   secret:
   #     secretName: mysecret
   #     optional: false
 
 # Additional volumeMounts on the output Deployment definition.
-extraVolumeMounts: []
+volumeMounts: []
   # - name: foo
   #   mountPath: "/etc/foo"
   #   readOnly: true
@@ -100,8 +88,16 @@ tolerations: []
 
 affinity: {}
 
-extraEnv: []
-  # - name: FOO
-  #   value: "bar"
+# Main bot configuration. Will go in ConfigMap and be mounted appropriately
+configToml: ""
 
-# appVersion: "commit_id"
+# Additional config overrides (Dockerfile, build job template). Will be added in config cm. 
+# The chart will mount these into /app/overrides. Need to be referenced in the configToml then.
+extraConfigOverrides: {}
+# filename: "content"
+
+extraEnv: {}
+
+entrypointOverride: []
+
+argsOverride: []

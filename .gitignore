@@ -5,3 +5,4 @@ tmp
 .pytest_cache
 kg.ttl
 mmodabot-config.toml
+.ruff_cache
