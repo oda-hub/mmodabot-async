@@ -46,6 +46,6 @@ COPY --from=builder --chown=1000:1000 /root/.local/share/helm /home/bot/.local/s
 USER 1000
 WORKDIR /tmp
 
-ENTRYPOINT ["/tini", "--"]
+ENTRYPOINT ["tini", "--"]
 
 CMD ["/app/.venv/bin/mmodabot"]  
