@@ -23,18 +23,18 @@ jobs:
         with:
           filters: |
             drupal-module-controller:
-              - 'packages/drupal-module-controller/src'
-              - 'packages/drupal-module-controller/tests'
+              - 'packages/drupal-module-controller/src/**'
+              - 'packages/drupal-module-controller/tests/**'
               - 'packages/drupal-module-controller/pyproject.toml'
 
             mmodabot:
-              - 'packages/mmodabot/src'
-              - 'packages/mmodabot/tests'
+              - 'packages/mmodabot/src/**'
+              - 'packages/mmodabot/tests/**'
               - 'packages/mmodabot/pyproject.toml'
 
             mmoda-kg-registrar:
-              - 'packages/mmoda-kg-registrar/src'
-              - 'packages/mmoda-kg-registrar/tests'
+              - 'packages/mmoda-kg-registrar/src/**'
+              - 'packages/mmoda-kg-registrar/tests/**'
               - 'packages/mmoda-kg-registrar/pyproject.toml'
   lint:
       name: Lint with Ruff
