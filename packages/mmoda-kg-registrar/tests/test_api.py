@@ -16,9 +16,10 @@ def test_register_lookup_unregister(tmp_path):
     payload = {
         "project_repo": "https://example.com/myrepo.git",
         "project_title": "My Project",
+        "project_slug": "my-project",
         "last_activity_timestamp": "2025-09-17T17:08:03.000+02:00",
         "last_deployed_timestamp": "2025-09-17T17:28:03.000+02:00",
-        "service_name": "name",
+        "service_endpoint": "name",
         "deployment_name": "name",
         "deployment_namespace": "default",
         "creative_work_status": "development",
@@ -30,7 +31,7 @@ def test_register_lookup_unregister(tmp_path):
 
     r = tc.get("/lookup", params={"repo": payload["project_repo"]})
     assert r.status_code == 200
-    assert r.json()["record"]["http://odahub.io/ontology#service_name"] == "name"
+    assert r.json()["record"]["http://odahub.io/ontology#service_endpoint"] == "name"
 
     r = tc.delete("/unregister", params={"repo": payload["project_repo"]})
     assert r.status_code == 200

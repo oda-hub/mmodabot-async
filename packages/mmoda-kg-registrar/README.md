@@ -28,9 +28,10 @@ curl -X POST http://localhost:8000/register \
   -d '{
     "project_repo": "https://github.com/user/myproject.git",
     "project_title": "My Project",
+    "project_slug": "myproject",
     "last_activity_timestamp": "2026-04-01T10:00:00+00:00",
     "last_deployed_timestamp": "2026-04-01T10:00:00+00:00",
-    "service_name": "myproject-backend",
+    "service_endpoint": "myproject-backend",
     "deployment_name": "myproject-backend",
     "deployment_namespace": "default",
     "creative_work_status": "development"
@@ -61,9 +62,10 @@ Register or update a workflow service record.
 {
   "project_repo": "https://github.com/user/myproject.git",
   "project_title": "My Project",
+  "project_slug": "myproject",
   "last_activity_timestamp": "2026-04-01T10:00:00+00:00",
   "last_deployed_timestamp": "2026-04-01T10:00:00+00:00",
-  "service_name": "myproject-backend",
+  "service_endpoint": "myproject-backend",
   "deployment_name": "myproject-backend",
   "deployment_namespace": "default",
   "creative_work_status": "development"
@@ -79,7 +81,7 @@ Register or update a workflow service record.
   "record": {
     "http://www.w3.org/1999/02/22-rdf-syntax-ns#type": "http://odahub.io/ontology#WorkflowService",
     "http://odahub.io/ontology#project_title": "My Project",
-    "http://odahub.io/ontology#service_name": "myproject-backend",
+    "http://odahub.io/ontology#service_endpoint": "myproject-backend",
     ...
   }
 }
