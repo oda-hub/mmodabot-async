@@ -10,7 +10,7 @@ class WorkflowServicePayload(BaseModel):
     project_slug: str | None  # URL-friendly name, will be used as "instrument" by dispatcher plugin
     last_activity_timestamp: str  # last commit
     last_deployed_timestamp: str 
-    service_endpoint: str
+    service_endpoint: HttpUrl
     deployment_name: str  # Helm release name (of not helm, just k8s deployment name?)
     deployment_namespace: str
     creative_work_status: str = "development"
