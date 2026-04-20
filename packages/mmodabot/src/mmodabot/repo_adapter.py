@@ -201,12 +201,22 @@ class NBRepoAdapter:
             deployment_info = await asyncio.to_thread(
                 self.deployer.get_deployment_details)
             deployment_info = deployment_info["manifests"]
-            deployment_name = service_name = None
+            deployment_name = service_name = service_port = None
             for resource in deployment_info:
                 if resource.get("kind") == "Deployment":
                     deployment_name = resource["metadata"]["name"]
                 if resource.get("kind") == "Service":
                     service_name = resource["metadata"]["name"]
+                    # Extract port from service spec
+                    ports = resource.get("spec", {}).get("ports", [])
+                    if ports:
+                        service_port = ports[0].get("port")
+
+            service_endpoint = None
+            if service_name and service_port:
+                service_endpoint = f"http://{service_name}.{self.config.namespace}.svc.cluster.local:{service_port}"
+            elif service_name:
+                service_endpoint = f"http://{service_name}.{self.config.namespace}.svc.cluster.local"
 
             async with aiohttp.ClientSession() as session:
                 payload = {
@@ -215,7 +225,7 @@ class NBRepoAdapter:
                     "project_slug": self.project_slug,
                     "last_activity_timestamp": commit.committed_date,
                     "last_deployed_timestamp": f"{datetime.now().timestamp()}",
-                    "service_endpoint": f"{service_name}",
+                    "service_endpoint": service_endpoint,
                     "deployment_name": f"{deployment_name}",
                     "deployment_namespace": self.config.namespace,
                     "creative_work_status": self.creative_work_status
