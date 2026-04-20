@@ -52,9 +52,10 @@ class TurtleFileKGClient(KGClient):
     def _map_attrs(self, properties: Mapping[str, str]) -> Dict[str, URIRef]:
         return {
             "project_title": self.ODA.project_title,
+            "project_slug": self.ODA.project_slug,
             "last_activity_timestamp": self.ODA.last_activity_timestamp,
             "last_deployed_timestamp": self.ODA.last_deployed_timestamp,
-            "service_name": self.ODA.service_name,
+            "service_endpoint": self.ODA.service_endpoint,
             "deployment_name": self.ODA.deployment_name,
             "deployment_namespace": self.ODA.deployment_namespace,
             "creative_work_status": self.SCHEMA_CREATIVE_WORK_STATUS,
@@ -110,9 +111,10 @@ class SparqlKGClient(KGClient):
         inserts = [f"<{project_repo}> a <{self.ODA.WorkflowService}>"]
         predicate_map = {
             "project_title": self.ODA.project_title,
+            "project_slug": self.ODA.project_slug,
             "last_activity_timestamp": self.ODA.last_activity_timestamp,
             "last_deployed_timestamp": self.ODA.last_deployed_timestamp,
-            "service_name": self.ODA.service_name,
+            "service_endpoint": self.ODA.service_endpoint,
             "deployment_name": self.ODA.deployment_name,
             "deployment_namespace": self.ODA.deployment_namespace,
             "creative_work_status": self.SCHEMA_CREATIVE_WORK_STATUS,

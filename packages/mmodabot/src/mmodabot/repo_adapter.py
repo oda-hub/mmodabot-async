@@ -211,10 +211,11 @@ class NBRepoAdapter:
             async with aiohttp.ClientSession() as session:
                 payload = {
                     "project_repo": self.repo_url,
-                    "project_title": self.project_slug,
+                    "project_title": self.project_title,
+                    "project_slug": self.project_slug,
                     "last_activity_timestamp": commit.committed_date,
                     "last_deployed_timestamp": f"{datetime.now().timestamp()}",
-                    "service_name": f"{service_name}",
+                    "service_endpoint": f"{service_name}",
                     "deployment_name": f"{deployment_name}",
                     "deployment_namespace": self.config.namespace,
                     "creative_work_status": self.creative_work_status
