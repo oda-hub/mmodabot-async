@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 COPY . /app
 WORKDIR /app
 
-RUN $HOME/.local/bin/uv sync --python 3.13 --no-cache
+RUN /root/.local/bin/uv sync --python 3.13 --no-cache --no-editable
 
-ENTRYPOINT [ "uv", "run" ]
+ENTRYPOINT [ "/root/.local/bin/uv", "run" ]
 CMD ["mmoda-drupal-module-controller", "--host", "0.0.0.0", "--port", "8181"]
