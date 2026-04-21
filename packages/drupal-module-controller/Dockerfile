@@ -1,6 +1,7 @@
 FROM ghcr.io/oda-hub/frontend-container:44abab3-260421084135
 
 RUN curl -LsSf https://astral.sh/uv/0.11.7/install.sh | sh
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
 # Python deps
 COPY . /app
