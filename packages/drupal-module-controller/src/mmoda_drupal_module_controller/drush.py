@@ -1,8 +1,9 @@
+import os
 import subprocess
 from .jobs import append_log
 
-DRUPAL_ROOT = "/var/www/mmoda"
-DRUSH_EXECUTABLE = 'drush'
+DRUPAL_ROOT = os.environ.get('DRUPAL_ROOT', "/var/www/mmoda")
+DRUSH_EXECUTABLE = os.environ.get('DRUSH_EXECUTABLE', '/root/.composer/vendor/bin/drush')
 
 def run_drush_stream(job_id: str, args: list[str]):
     cmd = [DRUSH_EXECUTABLE, f"--root={DRUPAL_ROOT}", "-y", *args]
