@@ -121,7 +121,7 @@ class Controller:
                 logger.debug(f"Project {project.http_url_to_repo} is archived or marked for deletion.")
                 continue
             
-            logger.debug("Topics: project.topics")
+            logger.debug(f"Topics: {project.topics}")
             if set(project.topics) & set(self.config.monitor.triggering_topics):
                 logger.debug("Added to monitoring")
                 projects_set.add(project.http_url_to_repo)
