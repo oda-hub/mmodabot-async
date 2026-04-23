@@ -3,8 +3,10 @@ from mmodabot.utils import split_registry_image_ref
 import requests
 from typing import Callable, Any, Sequence
 from mmodabot.git_interface import GitServerInterface, CommitType
+import logging
 
 type ApiResponse = requests.Response | aiohttp.ClientResponse
+
 
 class NotificationHandler:
     """
@@ -28,6 +30,7 @@ class NotificationHandler:
 class CompositeNotificationHandler(NotificationHandler):
     def __init__(self, handlers: Sequence[NotificationHandler]):
         self.handlers = handlers
+        self.logger = logging.getLogger(__name__)
 
     @staticmethod
     def delegated(method_name: str) -> Callable[..., Any]:
@@ -40,7 +43,10 @@ class CompositeNotificationHandler(NotificationHandler):
                 except TypeError as e:
                     raise TypeError(f"Incorrect arguments for method {method_name}: {e}")
             for handler in self.handlers:
-                getattr(handler, method_name)(*args, **kwargs)
+                try:
+                    getattr(handler, method_name)(*args, **kwargs)
+                except Exception as e:
+                    self.logger.error(f'Unexpected exception in notifier {handler.__class__.__name__}: {e}')
         return method
 
     on_build_started = delegated('on_build_started')
@@ -59,7 +65,6 @@ class CompositeNotificationHandler(NotificationHandler):
 class LoggingNotificationHandler(NotificationHandler):
     # this is used for manual testing
     def __init__(self, logger=None):
-        import logging
         self.logger = logger or logging.getLogger(__name__)
 
     def on_build_started(self, repo_url: str, commit: CommitType, image_tag: str):
