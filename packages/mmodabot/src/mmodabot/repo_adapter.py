@@ -332,7 +332,7 @@ class NBRepoAdapter:
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.delete(f"{str(self.config.frontend_controller.url).strip('/')}/modules/{self.project_slug}") as resp:
-                    if resp.status == 200:
+                    if resp.status == 202:
                         logger.info(f"Successfully requested frontend to remove module for {self.repo_url}.")
                         return True
                     else:
