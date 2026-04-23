@@ -311,7 +311,7 @@ class NBRepoAdapter:
                                     if status_data["status"] == "done":
                                         break
                                     elif status_data["status"] == "failed":
-                                        self.notifier.on_frontend_update_failed(self.repo_url, commit, status_code=resp.status, response_content=await resp.json())
+                                        self.notifier.on_frontend_update_failed(self.repo_url, commit, status_code=status_resp.status, response_content=await status_resp.json())
                                         return RepoChangeStatus.FRONTEND_UPDATE_FAILED
                                 else:
                                     raise RuntimeError(f"Unexpected status code while checking frontend update job status: {status_resp.status}")
