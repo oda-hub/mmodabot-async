@@ -91,26 +91,28 @@ class LoggingNotificationHandler(NotificationHandler):
         self.logger.info(f"[NOTIFIER] Backend {repo_url} registered in KG following commit: {commit.id}")
 
     def on_backend_registration_failed(self, repo_url: str, commit: CommitType, response: ApiResponse | None = None, ex: Exception | None = None):
-        self.logger.error(f"[NOTIFIER] Backend registration in KG failed: {repo_url} {commit.id}")
         if response:
             status = getattr(response, 'status_code', getattr(response, 'status', 'unknown'))
-            self.logger.error(
-                f"[NOTIFIER] Status code: {getattr(response, 'status_code', status)}\n"
-                f"[NOTIFIER] Response content: {getattr(response, 'text', getattr(response, 'content', ''))}")
+            self.logger.debug(
+                f"[NOTIFIER] Status code: {status}\n"
+                f"[NOTIFIER] Response content: {response.json()}")
         if ex:
-            self.logger.error(f"[NOTIFIER]Exception occurred: {ex}")
+            self.logger.debug(f"[NOTIFIER]Exception occurred: {ex}")
+        self.logger.error(f"[NOTIFIER] Backend registration in KG failed: {repo_url} {commit.id}")
+
 
     def on_frontend_updated(self, repo_url: str, commit: CommitType):
         self.logger.info(f"[NOTIFIER] Updated frontend instrument module: {repo_url} {commit.id}")
 
     def on_frontend_update_failed(self, repo_url: str, commit: CommitType, response: ApiResponse | None = None, ex: Exception | None = None):
-        self.logger.error(f"[NOTIFIER] Failed to update frontend instrument module: {repo_url} {commit.id}")
         if response:
-            self.logger.error(
-                f"[NOTIFIER] Status code: {getattr(response, 'status_code', getattr(response, 'status', 'unknown'))}\n"
-                f"[NOTIFIER] Response content: {getattr(response, 'text', getattr(response, 'content', ''))}")
+            status = getattr(response, 'status_code', getattr(response, 'status', 'unknown'))
+            self.logger.debug(
+                f"[NOTIFIER] Status code: {status}\n"
+                f"[NOTIFIER] Response content: {response.json()}")
         if ex:
-            self.logger.error(f"[NOTIFIER] Exception occurred: {ex}")
+            self.logger.debug(f"[NOTIFIER] Exception occurred: {ex}")
+        self.logger.error(f"[NOTIFIER] Failed to update frontend instrument module: {repo_url} {commit.id}")
 
 class GitlabNotificationHandler(NotificationHandler):
     def __init__(self, nickname: str = 'MMODA', frontend_url: str | None = None):
@@ -199,7 +201,7 @@ class GitlabNotificationHandler(NotificationHandler):
             status='running',
             description='Updating frontend instrument module...'
         )
-        
+
     def on_frontend_updated(self, repo_url: str, commit: CommitType):
         GitServerInterface.set_commit_status(
             commit=commit,
