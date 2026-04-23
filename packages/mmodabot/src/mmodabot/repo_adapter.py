@@ -232,7 +232,7 @@ class NBRepoAdapter:
                 }
 
                 logger.debug(f"Registering backend for {self.repo_url}@{commit.id} against {self.config.registrar.url} with payload: {payload}")
-                async with session.post(f"{self.config.registrar.url}/register", json=payload) as resp:
+                async with session.post(f"{str(self.config.registrar.url).strip('/')}/register", json=payload) as resp:
                     if resp.status == 201:
                         self.notifier.on_backend_registered(repo_url=self.repo_url, commit=commit)
                         return RepoChangeStatus.REGISTERED
@@ -245,7 +245,7 @@ class NBRepoAdapter:
 
     async def unregister_mmoda_backend(self):
         async with aiohttp.ClientSession() as session:
-            async with session.delete(f"{self.config.registrar.url}/unregister", params={"repo": self.repo_url}) as resp:
+            async with session.delete(f"{str(self.config.registrar.url).strip('/')}/unregister", params={"repo": self.repo_url}) as resp:
                 if resp.status == 200:
                     logger.info(f"Successfully unregistered {self.repo_url} from KG.")
                     return True
@@ -300,12 +300,12 @@ class NBRepoAdapter:
                 "acknowledgement": acknowledgement
             }
             try:
-                async with session.post(f"{self.config.frontend_controller.url}/modules", json=payload) as resp:
+                async with session.post(f"{str(self.config.frontend_controller.url).strip('/')}/modules", json=payload) as resp:
                     if resp.status == 202:
                         job_id = (await resp.json())["job_id"]
                         while True:
                             await asyncio.sleep(5)
-                            async with session.get(f"{self.config.frontend_controller.url}/jobs/{job_id}") as status_resp:
+                            async with session.get(f"{str(self.config.frontend_controller.url).strip('/')}/jobs/{job_id}") as status_resp:
                                 if status_resp.status == 200:
                                     status_data = await status_resp.json()
                                     if status_data["status"] == "done":
@@ -331,7 +331,7 @@ class NBRepoAdapter:
         # TODO: monitor the deletion job
         async with aiohttp.ClientSession() as session:
             try:
-                async with session.delete(f"{self.config.frontend_controller.url}/modules/{self.project_slug}") as resp:
+                async with session.delete(f"{str(self.config.frontend_controller.url).strip('/')}/modules/{self.project_slug}") as resp:
                     if resp.status == 200:
                         logger.info(f"Successfully requested frontend to remove module for {self.repo_url}.")
                         return True
