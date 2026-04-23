@@ -21,10 +21,24 @@ class NotificationHandler:
     def on_deployment_completed(self, repo_url: str, commit: CommitType, image_tag: str): ...
     def on_deployment_failed(self, repo_url: str, commit: CommitType, image_tag: str, error: str | None = None): ...
     def on_backend_registered(self, repo_url: str, commit: CommitType): ...
-    def on_backend_registration_failed(self, repo_url: str, commit: CommitType, response: ApiResponse | None = None, ex: Exception | None = None): ...
+    def on_backend_registration_failed(
+        self,
+        repo_url: str,
+        commit: CommitType,
+        status_code: str | int | None = None,
+        response_content: str | dict | None = None,
+        ex: Exception | None = None,
+    ): ...
     def on_frontend_update_started(self, repo_url: str, commit: CommitType): ...
     def on_frontend_updated(self, repo_url: str, commit: CommitType): ...
-    def on_frontend_update_failed(self, repo_url: str, commit: CommitType, response: ApiResponse | None = None, ex: Exception | None = None): ...
+    def on_frontend_update_failed(
+        self,
+        repo_url: str,
+        commit: CommitType,
+        status_code: str | int | None = None,
+        response_content: str | dict | None = None,
+        ex: Exception | None = None,
+    ): ...
 
 
 class CompositeNotificationHandler(NotificationHandler):
@@ -95,29 +109,43 @@ class LoggingNotificationHandler(NotificationHandler):
     def on_backend_registered(self, repo_url: str, commit: CommitType):
         self.logger.info(f"[NOTIFIER] Backend {repo_url} registered in KG following commit: {commit.id}")
 
-    def on_backend_registration_failed(self, repo_url: str, commit: CommitType, response: ApiResponse | None = None, ex: Exception | None = None):
-        if response:
-            status = getattr(response, 'status_code', getattr(response, 'status', 'unknown'))
-            self.logger.debug(
-                f"[NOTIFIER] Status code: {status}\n"
-                f"[NOTIFIER] Response content: {response.json()}")
+    def on_backend_registration_failed(
+        self,
+        repo_url: str,
+        commit: CommitType,
+        status_code: str | int | None = None,
+        response_content: str | dict | None = None,
+        ex: Exception | None = None,
+    ):
+        extra_info = ''
+        if status_code:
+            extra_info += f"Status code: {status_code}\n"
+        if response_content:
+            f"Response content: {response_content}\n"
         if ex:
-            self.logger.debug(f"[NOTIFIER]Exception occurred: {ex}")
-        self.logger.error(f"[NOTIFIER] Backend registration in KG failed: {repo_url} {commit.id}")
+            extra_info += (f"Exception occurred: {ex}")
+        self.logger.error(f"[NOTIFIER] Backend registration in KG failed: {repo_url} {commit.id}\n{extra_info}")
 
 
     def on_frontend_updated(self, repo_url: str, commit: CommitType):
         self.logger.info(f"[NOTIFIER] Updated frontend instrument module: {repo_url} {commit.id}")
 
-    def on_frontend_update_failed(self, repo_url: str, commit: CommitType, response: ApiResponse | None = None, ex: Exception | None = None):
-        if response:
-            status = getattr(response, 'status_code', getattr(response, 'status', 'unknown'))
-            self.logger.debug(
-                f"[NOTIFIER] Status code: {status}\n"
-                f"[NOTIFIER] Response content: {response.json()}")
+    def on_frontend_update_failed(
+        self,
+        repo_url: str,
+        commit: CommitType,
+        status_code: str | int | None = None,
+        response_content: str | dict | None = None,
+        ex: Exception | None = None,
+    ):
+        extra_info = ''
+        if status_code:
+            extra_info += f"Status code: {status_code}\n"
+        if response_content:
+            f"Response content: {response_content}\n"
         if ex:
-            self.logger.debug(f"[NOTIFIER] Exception occurred: {ex}")
-        self.logger.error(f"[NOTIFIER] Failed to update frontend instrument module: {repo_url} {commit.id}")
+            extra_info += (f"Exception occurred: {ex}")
+        self.logger.error(f"[NOTIFIER] Failed to update frontend instrument module: {repo_url} {commit.id}\n{extra_info}")
 
 class GitlabNotificationHandler(NotificationHandler):
     def __init__(self, nickname: str = 'MMODA', frontend_url: str | None = None):
@@ -191,12 +219,19 @@ class GitlabNotificationHandler(NotificationHandler):
             description='Backend registered in KG'
         )
 
-    def on_backend_registration_failed(self, repo_url: str, commit: CommitType, response: ApiResponse | None = None, ex: Exception | None = None):
+    def on_backend_registration_failed(
+        self,
+        repo_url: str,
+        commit: CommitType,
+        status_code: str | int | None = None,
+        response_content: str | dict | None = None,
+        ex: Exception | None = None,
+    ):
         GitServerInterface.set_commit_status(
             commit=commit,
             name=f'{self.nickname}: Registration',
             status='failed',
-            description=f'Failed to register backend in KG: {ex if ex else ''}'
+            description=f"Failed to register backend in KG. {'Status code: '+str(status_code) if status_code else ''} {'Exception: '+str(ex) if ex else ''}"
         )
 
     def on_frontend_update_started(self, repo_url: str, commit: CommitType):
@@ -216,10 +251,17 @@ class GitlabNotificationHandler(NotificationHandler):
             target_url=self.frontend_url
         )
 
-    def on_frontend_update_failed(self, repo_url: str, commit: CommitType, response: ApiResponse | None = None, ex: Exception | None = None):
+    def on_frontend_update_failed(
+        self,
+        repo_url: str,
+        commit: CommitType,
+        status_code: str | int | None = None,
+        response_content: str | dict | None = None,
+        ex: Exception | None = None,
+    ):
         GitServerInterface.set_commit_status(
             commit=commit,
             name=f'{self.nickname}: Update Frontend',
             status='failed',
-            description=f'Failed to update frontend instrument module: {ex if ex else ""}'
+            description=f"Failed to update frontend instrument module: {'Status code: '+str(status_code) if status_code else ''} {'Exception: '+str(ex) if ex else ''}"
         )

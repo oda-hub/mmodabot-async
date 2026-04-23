@@ -237,7 +237,7 @@ class NBRepoAdapter:
                         self.notifier.on_backend_registered(repo_url=self.repo_url, commit=commit)
                         return RepoChangeStatus.REGISTERED
                     else:
-                        self.notifier.on_backend_registration_failed(repo_url=self.repo_url, commit=commit, response=resp)
+                        self.notifier.on_backend_registration_failed(repo_url=self.repo_url, commit=commit, status_code=resp.status, response_content=await resp.json())
                         return RepoChangeStatus.REGISTER_FAILED
         except Exception as exc:
             logger.exception(f"Exception registering backend for {self.repo_url}@{commit.id}")
@@ -311,7 +311,7 @@ class NBRepoAdapter:
                                     if status_data["status"] == "done":
                                         break
                                     elif status_data["status"] == "failed":
-                                        self.notifier.on_frontend_update_failed(self.repo_url, commit, response=status_resp)
+                                        self.notifier.on_frontend_update_failed(self.repo_url, commit, status_code=resp.status, response_content=await resp.json())
                                         return RepoChangeStatus.FRONTEND_UPDATE_FAILED
                                 else:
                                     raise RuntimeError(f"Unexpected status code while checking frontend update job status: {status_resp.status}")
@@ -319,7 +319,7 @@ class NBRepoAdapter:
                         self.notifier.on_frontend_updated(self.repo_url, commit)
                         return RepoChangeStatus.FRONTEND_UPDATED
                     else:
-                        self.notifier.on_frontend_update_failed(self.repo_url, commit, response=resp)
+                        self.notifier.on_frontend_update_failed(self.repo_url, commit, status_code=resp.status, response_content=await resp.json())
                         return RepoChangeStatus.FRONTEND_UPDATE_FAILED
 
             except Exception as e:
