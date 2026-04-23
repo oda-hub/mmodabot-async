@@ -171,8 +171,8 @@ class TestNBRepoAdapter:
     async def test_update_frontend_module_success(self, adapter, mock_commit):
         """Test successful frontend module update"""
 
-        with patch.object(adapter, 'generate_help_html', new_callable=AsyncMock, return_value="<html>help</html>"), \
-             patch.object(adapter, 'generate_acknowledgement', new_callable=AsyncMock, return_value="acknowledgement text"), \
+        with patch.object(adapter, '_generate_help_html', new_callable=AsyncMock, return_value="<html>help</html>"), \
+             patch.object(adapter, '_generate_acknowledgement', new_callable=AsyncMock, return_value="acknowledgement text"), \
              patch('aiohttp.ClientSession') as mock_session_class:
 
             mock_session = MagicMock()
@@ -203,8 +203,8 @@ class TestNBRepoAdapter:
         """Test frontend module update when job fails"""
         adapter.config.frontend_controller = {"url": "http://frontend.example.com"}
 
-        with patch.object(adapter, 'generate_help_html', new_callable=AsyncMock, return_value="<html>help</html>"), \
-             patch.object(adapter, 'generate_acknowledgement', new_callable=AsyncMock, return_value="acknowledgement text"), \
+        with patch.object(adapter, '_generate_help_html', new_callable=AsyncMock, return_value="<html>help</html>"), \
+             patch.object(adapter, '_generate_acknowledgement', new_callable=AsyncMock, return_value="acknowledgement text"), \
              patch('aiohttp.ClientSession') as mock_session_class:
 
             mock_session = MagicMock()
@@ -235,8 +235,8 @@ class TestNBRepoAdapter:
         """Test frontend module update when initial POST fails"""
         adapter.config.frontend_controller = {"url": "http://frontend.example.com"}
 
-        with patch.object(adapter, 'generate_help_html', new_callable=AsyncMock, return_value="<html>help</html>"), \
-             patch.object(adapter, 'generate_acknowledgement', new_callable=AsyncMock, return_value="acknowledgement text"), \
+        with patch.object(adapter, '_generate_help_html', new_callable=AsyncMock, return_value="<html>help</html>"), \
+             patch.object(adapter, '_generate_acknowledgement', new_callable=AsyncMock, return_value="acknowledgement text"), \
              patch('aiohttp.ClientSession') as mock_session_class:
 
             mock_session = MagicMock()
@@ -258,6 +258,6 @@ class TestNBRepoAdapter:
         """Test frontend module update exception handling"""
         adapter.config.frontend_controller = {"url": "http://frontend.example.com"}
 
-        with patch.object(adapter, 'generate_help_html', new_callable=AsyncMock, side_effect=Exception("Generation error")):
+        with patch.object(adapter, '_generate_help_html', new_callable=AsyncMock, side_effect=Exception("Generation error")):
             with pytest.raises(Exception, match="Generation error"):
                 await adapter.update_frontend_module(mock_commit)
