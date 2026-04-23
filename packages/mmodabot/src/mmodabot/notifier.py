@@ -1,9 +1,12 @@
 import aiohttp
+from mmodabot.utils import split_registry_image_ref
 import requests
 from typing import Callable, Any, Sequence
-from mmodabot.git_interface import CommitType
+from mmodabot.git_interface import GitServerInterface, CommitType
+import logging
 
 type ApiResponse = requests.Response | aiohttp.ClientResponse
+
 
 class NotificationHandler:
     """
@@ -18,15 +21,30 @@ class NotificationHandler:
     def on_deployment_completed(self, repo_url: str, commit: CommitType, image_tag: str): ...
     def on_deployment_failed(self, repo_url: str, commit: CommitType, image_tag: str, error: str | None = None): ...
     def on_backend_registered(self, repo_url: str, commit: CommitType): ...
-    def on_backend_registration_failed(self, repo_url: str, commit: CommitType, response: ApiResponse | None = None, ex: Exception | None = None): ...
+    def on_backend_registration_failed(
+        self,
+        repo_url: str,
+        commit: CommitType,
+        status_code: str | int | None = None,
+        response_content: str | dict | None = None,
+        ex: Exception | None = None,
+    ): ...
     def on_frontend_update_started(self, repo_url: str, commit: CommitType): ...
     def on_frontend_updated(self, repo_url: str, commit: CommitType): ...
-    def on_frontend_update_failed(self, repo_url: str, commit: CommitType, response: ApiResponse | None = None, ex: Exception | None = None): ...
+    def on_frontend_update_failed(
+        self,
+        repo_url: str,
+        commit: CommitType,
+        status_code: str | int | None = None,
+        response_content: str | dict | None = None,
+        ex: Exception | None = None,
+    ): ...
 
 
 class CompositeNotificationHandler(NotificationHandler):
     def __init__(self, handlers: Sequence[NotificationHandler]):
         self.handlers = handlers
+        self.logger = logging.getLogger(__name__)
 
     @staticmethod
     def delegated(method_name: str) -> Callable[..., Any]:
@@ -39,7 +57,10 @@ class CompositeNotificationHandler(NotificationHandler):
                 except TypeError as e:
                     raise TypeError(f"Incorrect arguments for method {method_name}: {e}")
             for handler in self.handlers:
-                getattr(handler, method_name)(*args, **kwargs)
+                try:
+                    getattr(handler, method_name)(*args, **kwargs)
+                except Exception as e:
+                    self.logger.error(f'Unexpected exception in notifier {handler.__class__.__name__}: {e}')
         return method
 
     on_build_started = delegated('on_build_started')
@@ -58,7 +79,6 @@ class CompositeNotificationHandler(NotificationHandler):
 class LoggingNotificationHandler(NotificationHandler):
     # this is used for manual testing
     def __init__(self, logger=None):
-        import logging
         self.logger = logger or logging.getLogger(__name__)
 
     def on_build_started(self, repo_url: str, commit: CommitType, image_tag: str):
@@ -89,24 +109,159 @@ class LoggingNotificationHandler(NotificationHandler):
     def on_backend_registered(self, repo_url: str, commit: CommitType):
         self.logger.info(f"[NOTIFIER] Backend {repo_url} registered in KG following commit: {commit.id}")
 
-    def on_backend_registration_failed(self, repo_url: str, commit: CommitType, response: ApiResponse | None = None, ex: Exception | None = None):
-        self.logger.error(f"[NOTIFIER] Backend registration in KG failed: {repo_url} {commit.id}")
-        if response:
-            status = getattr(response, 'status_code', getattr(response, 'status', 'unknown'))
-            self.logger.error(
-                f"[NOTIFIER] Status code: {getattr(response, 'status_code', status)}\n"
-                f"[NOTIFIER] Response content: {getattr(response, 'text', getattr(response, 'content', ''))}")
+    def on_backend_registration_failed(
+        self,
+        repo_url: str,
+        commit: CommitType,
+        status_code: str | int | None = None,
+        response_content: str | dict | None = None,
+        ex: Exception | None = None,
+    ):
+        extra_info = ''
+        if status_code:
+            extra_info += f"Status code: {status_code}\n"
+        if response_content:
+            f"Response content: {response_content}\n"
         if ex:
-            self.logger.error(f"[NOTIFIER]Exception occurred: {ex}")
+            extra_info += (f"Exception occurred: {ex}")
+        self.logger.error(f"[NOTIFIER] Backend registration in KG failed: {repo_url} {commit.id}\n{extra_info}")
+
 
     def on_frontend_updated(self, repo_url: str, commit: CommitType):
         self.logger.info(f"[NOTIFIER] Updated frontend instrument module: {repo_url} {commit.id}")
 
-    def on_frontend_update_failed(self, repo_url: str, commit: CommitType, response: ApiResponse | None = None, ex: Exception | None = None):
-        self.logger.error(f"[NOTIFIER] Failed to update frontend instrument module: {repo_url} {commit.id}")
-        if response:
-            self.logger.error(
-                f"[NOTIFIER] Status code: {getattr(response, 'status_code', getattr(response, 'status', 'unknown'))}\n"
-                f"[NOTIFIER] Response content: {getattr(response, 'text', getattr(response, 'content', ''))}")
+    def on_frontend_update_failed(
+        self,
+        repo_url: str,
+        commit: CommitType,
+        status_code: str | int | None = None,
+        response_content: str | dict | None = None,
+        ex: Exception | None = None,
+    ):
+        extra_info = ''
+        if status_code:
+            extra_info += f"Status code: {status_code}\n"
+        if response_content:
+            f"Response content: {response_content}\n"
         if ex:
-            self.logger.error(f"[NOTIFIER] Exception occurred: {ex}")
+            extra_info += (f"Exception occurred: {ex}")
+        self.logger.error(f"[NOTIFIER] Failed to update frontend instrument module: {repo_url} {commit.id}\n{extra_info}")
+
+class GitlabNotificationHandler(NotificationHandler):
+    def __init__(self, nickname: str = 'MMODA', frontend_url: str | None = None):
+        self.nickname = nickname
+        self.frontend_url = frontend_url
+
+    def on_build_started(self, repo_url: str, commit: CommitType, image_tag: str):
+        GitServerInterface.set_commit_status(
+            commit=commit,
+            name=f'{self.nickname}: Build',
+            status='running',
+            description=f'Building image {image_tag}...'
+        )
+
+    def on_build_completed(self, repo_url: str, commit: CommitType, image_repo: str, image_tag: str):
+        registry = split_registry_image_ref(image_repo)
+        if registry == 'docker.io':
+            target_url = f"https://hub.docker.com/r/{image_repo}"
+        elif 'gitlab' in registry:
+            # Assume we are using gitlab registry linked to the project
+            target_url = f"{repo_url.replace('.git', '').strip('/')}/container_registry"
+        else:
+            target_url = None
+
+        GitServerInterface.set_commit_status(
+            commit=commit,
+            name='f{self.nickname}: Build',
+            status='success',
+            description=f'Image {image_repo}:{image_tag} built successfully',
+            target_url=target_url
+        )
+
+    def on_build_failed(self, repo_url: str, commit: CommitType, image_tag: str, data: dict = {}):
+        GitServerInterface.set_commit_status(
+            commit=commit,
+            name=f'{self.nickname}: Build',
+            status='failed',
+            description=f'Build failed, image tag: {image_tag}'
+        )
+        
+    def on_build_cancelled(self, repo_url: str, commit: CommitType, image_tag: str): ...
+    def on_deployment_started(self, repo_url: str, commit: CommitType, image_tag: str):
+        GitServerInterface.set_commit_status(
+            commit=commit,
+            name=f'{self.nickname}: Deployment',
+            status='running',
+            description=f'Deploying MMODA backend, image tag: {image_tag}...'
+        )
+
+    def on_deployment_completed(self, repo_url: str, commit: CommitType, image_tag: str):
+        GitServerInterface.set_commit_status(
+            commit=commit,
+            name=f'{self.nickname}: Deployment',
+            status='success',
+            description=f'Deployed MMODA backend, image tag: {image_tag}'
+        )
+
+    def on_deployment_failed(self, repo_url: str, commit: CommitType, image_tag: str, error: str | None = None):
+        GitServerInterface.set_commit_status(
+            commit=commit,
+            name=f'{self.nickname}: Deployment',
+            status='failed',
+            description=f'Failed to deploy MMODA backend, image tag: {image_tag}' + (f': {error}' if error else '')
+        )
+
+    def on_backend_registered(self, repo_url: str, commit: CommitType):
+        GitServerInterface.set_commit_status(
+            commit=commit,
+            name=f'{self.nickname}: Registration',
+            status='success',
+            description='Backend registered in KG'
+        )
+
+    def on_backend_registration_failed(
+        self,
+        repo_url: str,
+        commit: CommitType,
+        status_code: str | int | None = None,
+        response_content: str | dict | None = None,
+        ex: Exception | None = None,
+    ):
+        GitServerInterface.set_commit_status(
+            commit=commit,
+            name=f'{self.nickname}: Registration',
+            status='failed',
+            description=f"Failed to register backend in KG. {'Status code: '+str(status_code) if status_code else ''} {'Exception: '+str(ex) if ex else ''}"
+        )
+
+    def on_frontend_update_started(self, repo_url: str, commit: CommitType):
+        GitServerInterface.set_commit_status(
+            commit=commit,
+            name=f'{self.nickname}: Update Frontend',
+            status='running',
+            description='Updating frontend instrument module...'
+        )
+
+    def on_frontend_updated(self, repo_url: str, commit: CommitType):
+        GitServerInterface.set_commit_status(
+            commit=commit,
+            name=f'{self.nickname}: Update Frontend',
+            status='success',
+            description='Frontend instrument module updated successfully',
+            target_url=self.frontend_url
+        )
+
+    def on_frontend_update_failed(
+        self,
+        repo_url: str,
+        commit: CommitType,
+        status_code: str | int | None = None,
+        response_content: str | dict | None = None,
+        ex: Exception | None = None,
+    ):
+        GitServerInterface.set_commit_status(
+            commit=commit,
+            name=f'{self.nickname}: Update Frontend',
+            status='failed',
+            description=f"Failed to update frontend instrument module: {'Status code: '+str(status_code) if status_code else ''} {'Exception: '+str(ex) if ex else ''}"
+        )

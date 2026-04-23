@@ -231,20 +231,21 @@ class NBRepoAdapter:
                     "creative_work_status": self.creative_work_status
                 }
 
-                async with session.post(str(self.config.registrar.url), json=payload) as resp:
+                logger.debug(f"Registering backend for {self.repo_url}@{commit.id} against {self.config.registrar.url} with payload: {payload}")
+                async with session.post(f"{str(self.config.registrar.url).strip('/')}/register", json=payload) as resp:
                     if resp.status == 201:
                         self.notifier.on_backend_registered(repo_url=self.repo_url, commit=commit)
                         return RepoChangeStatus.REGISTERED
                     else:
-                        self.notifier.on_backend_registration_failed(repo_url=self.repo_url, commit=commit)
+                        self.notifier.on_backend_registration_failed(repo_url=self.repo_url, commit=commit, status_code=resp.status, response_content=await resp.json())
                         return RepoChangeStatus.REGISTER_FAILED
-        except Exception:
+        except Exception as exc:
             logger.exception(f"Exception registering backend for {self.repo_url}@{commit.id}")
-            self.notifier.on_backend_registration_failed(repo_url=self.repo_url, commit=commit)
+            self.notifier.on_backend_registration_failed(repo_url=self.repo_url, commit=commit, ex=exc)
 
     async def unregister_mmoda_backend(self):
         async with aiohttp.ClientSession() as session:
-            async with session.delete(str(self.config.registrar.url), params={"repo": self.repo_url}) as resp:
+            async with session.delete(f"{str(self.config.registrar.url).strip('/')}/unregister", params={"repo": self.repo_url}) as resp:
                 if resp.status == 200:
                     logger.info(f"Successfully unregistered {self.repo_url} from KG.")
                     return True
@@ -252,7 +253,7 @@ class NBRepoAdapter:
                     logger.error(f"Failed to unregister {self.repo_url} from KG. Status code: {resp.status}")
                     return False
 
-    async def generate_help_html(self, commit: CommitType) -> str | None:
+    async def _generate_help_html(self, commit: CommitType) -> str | None:
         try:
             help_md = await asyncio.to_thread(self.git_interface.get_repo_file_content, 
                                         path='mmoda_help_page.md', git_ref=commit.id)
@@ -265,7 +266,7 @@ class NBRepoAdapter:
             logger.exception("Unexpected exception in generate_help_html:")
             return None
 
-    async def generate_acknowledgement(self, commit_id: str) -> str:
+    async def _generate_acknowledgement(self, commit_id: str) -> str:
         try:
             acknowl = await asyncio.to_thread(self.git_interface.get_repo_file_content, 
                                         path='acknowledgements.md', git_ref=commit_id)
@@ -283,8 +284,8 @@ class NBRepoAdapter:
 
 
     async def update_frontend_module(self, commit: CommitType): # commit is for info here, it registers current state anyway
-        help_html = await self.generate_help_html(commit)
-        acknowledgement = await self.generate_acknowledgement(commit.id)
+        help_html = await self._generate_help_html(commit)
+        acknowledgement = await self._generate_acknowledgement(commit.id)
 
         self.notifier.on_frontend_update_started(repo_url=self.repo_url, commit=commit)
         async with aiohttp.ClientSession() as session:
@@ -299,18 +300,18 @@ class NBRepoAdapter:
                 "acknowledgement": acknowledgement
             }
             try:
-                async with session.post(str(self.config.frontend_controller.url), json=payload) as resp:
+                async with session.post(f"{str(self.config.frontend_controller.url).strip('/')}/modules", json=payload) as resp:
                     if resp.status == 202:
                         job_id = (await resp.json())["job_id"]
                         while True:
                             await asyncio.sleep(5)
-                            async with session.get(f"{self.config.frontend_controller.url}/jobs/{job_id}") as status_resp:
+                            async with session.get(f"{str(self.config.frontend_controller.url).strip('/')}/jobs/{job_id}") as status_resp:
                                 if status_resp.status == 200:
                                     status_data = await status_resp.json()
                                     if status_data["status"] == "done":
                                         break
                                     elif status_data["status"] == "failed":
-                                        self.notifier.on_frontend_update_failed(self.repo_url, commit, response=status_resp)
+                                        self.notifier.on_frontend_update_failed(self.repo_url, commit, status_code=status_resp.status, response_content=await status_resp.json())
                                         return RepoChangeStatus.FRONTEND_UPDATE_FAILED
                                 else:
                                     raise RuntimeError(f"Unexpected status code while checking frontend update job status: {status_resp.status}")
@@ -318,7 +319,7 @@ class NBRepoAdapter:
                         self.notifier.on_frontend_updated(self.repo_url, commit)
                         return RepoChangeStatus.FRONTEND_UPDATED
                     else:
-                        self.notifier.on_frontend_update_failed(self.repo_url, commit, response=resp)
+                        self.notifier.on_frontend_update_failed(self.repo_url, commit, status_code=resp.status, response_content=await resp.json())
                         return RepoChangeStatus.FRONTEND_UPDATE_FAILED
 
             except Exception as e:
@@ -330,8 +331,8 @@ class NBRepoAdapter:
         # TODO: monitor the deletion job
         async with aiohttp.ClientSession() as session:
             try:
-                async with session.delete(f"{self.config.frontend_controller.url}/{self.project_slug}") as resp:
-                    if resp.status == 200:
+                async with session.delete(f"{str(self.config.frontend_controller.url).strip('/')}/modules/{self.project_slug}") as resp:
+                    if resp.status == 202:
                         logger.info(f"Successfully requested frontend to remove module for {self.repo_url}.")
                         return True
                     else:
