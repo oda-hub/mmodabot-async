@@ -142,7 +142,7 @@ class TestNBRepoAdapter:
         """Test backend registration failure"""
 
         with patch.object(adapter.deployer, 'get_deployment_details', return_value={"manifests": []}), \
-             patch('aiohttp.ClientSession') as mock_session_class:
+            patch('aiohttp.ClientSession') as mock_session_class:
 
             mock_session = MagicMock()
             mock_session_class.return_value.__aenter__.return_value = mock_session
@@ -151,6 +151,7 @@ class TestNBRepoAdapter:
             mock_response.status = 400
             mock_response.__aenter__ = AsyncMock(return_value=mock_response)
             mock_response.__aexit__ = AsyncMock(return_value=None)
+            mock_response.json = AsyncMock(return_value={"error": "Registration failed"})
             mock_session.post.return_value = mock_response
 
             result = await adapter.register_mmoda_backend(mock_commit)
