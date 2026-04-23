@@ -13,7 +13,7 @@ Preparation:
 - Create token to list group and access repos. `kubectl create secret generic SECRET_NAME --from-literal=token=TOKEN`
   - To list group, need at least `role: Reporter, scope: read_api`
   - Also enough for clonning repos (including private)
-  - For setting commit status (notificator), needs `role: Developer, scope: api`
+  - For setting commit status (notificator), needs `role: Maintainer, scope: api`
   - For separately defined public repos, still need at least `read_api` access for gitlab-interface to work
   - Need to define several and add names/keys to config
 
@@ -33,5 +33,3 @@ kubectl create secret generic $(depl_base_name https://gitlab.in2p3.fr/mmoda/wor
 se}'
 ```
 
-
-- Uses helm with helm-diff plugin. Install in container
