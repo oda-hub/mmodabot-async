@@ -144,7 +144,7 @@ class NBRepoAdapter:
 
         if await self.builder.image_exists(target_tag):
             logger.info(f"Image {self.target_image_base}:{target_tag} exists in registry.")
-            if self.config.builder.enabled and self.builder.check_build_job_succeeded(git_ref, commit):
+            if self.config.builder.enabled and await self.builder.check_build_job_succeeded(git_ref, commit):
                 # the second check is to avoid trigger after bot restart for pre-existing images
                 self.notifier.on_build_completed(
                     repo_url=self.repo_url,
