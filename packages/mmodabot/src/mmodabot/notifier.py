@@ -172,7 +172,7 @@ class GitlabNotificationHandler(NotificationHandler):
 
         GitServerInterface.set_commit_status(
             commit=commit,
-            name='f{self.nickname}: Build',
+            name=f'{self.nickname}: Build',
             status='success',
             description=f'Image {image_repo}:{image_tag} built successfully',
             target_url=target_url
