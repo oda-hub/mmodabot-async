@@ -9,6 +9,7 @@ class CommitProtocol(Protocol):
     committed_date: str
     web_url: str
     manager: ProjectCommitManager
+    short_id: str
 
 type CommitType = CommitProtocol | ProjectCommit
 
@@ -103,3 +104,23 @@ class GitServerInterface:
         group_path = group_link.replace(self.git.url, '').strip('/')
         group = self.git.groups.get(group_path)
         return group.projects.list(get_all=get_all, iterator=iterator)
+
+    @staticmethod
+    def set_commit_status(
+        commit: CommitType,
+        name: str,
+        status: str,
+        target_url: str | None = None,
+        description: str | None = None,
+    ):
+        if isinstance(commit, ProjectCommit):
+            commit.statuses.create({
+                'state': status,
+                'target_url': target_url,
+                'name': name,
+                'description': description
+            })
+        else:
+            raise NotImplementedError("Only ProjectCommit type is supported for now.")
+        
+

@@ -118,7 +118,7 @@ class NBRepoAdapter:
 
     async def build_mmoda_backend(self, git_ref: str, target_image_tag: str, commit: CommitType):
         try:
-            # this function run in a loop to check status. Notification of build start is in builder
+            # this function run in a loop to check status. Notification of build start is in builder to avoid duplicated notifications
             status = await self.builder.build(git_ref=git_ref, commit=commit)
             if status == BuildStatus.FAILED:
                 logger.error(f"Build failed for {self.repo_url}@{commit.id}")
@@ -131,12 +131,7 @@ class NBRepoAdapter:
                 return status
             if status == BuildStatus.CANCELLED:
                 self.notifier.on_build_cancelled(repo_url=self.repo_url, commit=commit, image_tag=target_image_tag)
-            if status == BuildStatus.SUCCEEDED:
-                self.notifier.on_build_completed(
-                    repo_url=self.repo_url,
-                    commit=commit,
-                    image_repo=self.target_image_base,
-                    image_tag=target_image_tag)
+            # status succeeded notification is in ensure_container_image, as this function is not called upon pushing image to the repo
             return status
         except Exception:
             logger.exception(f"Exception occurred while building backend for {self.repo_url}@{commit.id}")
@@ -149,6 +144,13 @@ class NBRepoAdapter:
 
         if await self.builder.image_exists(target_tag):
             logger.info(f"Image {self.target_image_base}:{target_tag} exists in registry.")
+            if self.config.builder.enabled and await self.builder.check_build_job_succeeded(git_ref, commit):
+                # the second check is to avoid trigger after bot restart for pre-existing images
+                self.notifier.on_build_completed(
+                    repo_url=self.repo_url,
+                    commit=commit,
+                    image_repo=self.target_image_base,
+                    image_tag=target_tag)
             return target_tag
 
         if self.config.builder.enabled:
@@ -231,20 +233,21 @@ class NBRepoAdapter:
                     "creative_work_status": self.creative_work_status
                 }
 
-                async with session.post(str(self.config.registrar.url), json=payload) as resp:
+                logger.debug(f"Registering backend for {self.repo_url}@{commit.id} against {self.config.registrar.url} with payload: {payload}")
+                async with session.post(f"{str(self.config.registrar.url).strip('/')}/register", json=payload) as resp:
                     if resp.status == 201:
                         self.notifier.on_backend_registered(repo_url=self.repo_url, commit=commit)
                         return RepoChangeStatus.REGISTERED
                     else:
-                        self.notifier.on_backend_registration_failed(repo_url=self.repo_url, commit=commit)
+                        self.notifier.on_backend_registration_failed(repo_url=self.repo_url, commit=commit, status_code=resp.status, response_content=await resp.json())
                         return RepoChangeStatus.REGISTER_FAILED
-        except Exception:
+        except Exception as exc:
             logger.exception(f"Exception registering backend for {self.repo_url}@{commit.id}")
-            self.notifier.on_backend_registration_failed(repo_url=self.repo_url, commit=commit)
+            self.notifier.on_backend_registration_failed(repo_url=self.repo_url, commit=commit, ex=exc)
 
     async def unregister_mmoda_backend(self):
         async with aiohttp.ClientSession() as session:
-            async with session.delete(str(self.config.registrar.url), params={"repo": self.repo_url}) as resp:
+            async with session.delete(f"{str(self.config.registrar.url).strip('/')}/unregister", params={"repo": self.repo_url}) as resp:
                 if resp.status == 200:
                     logger.info(f"Successfully unregistered {self.repo_url} from KG.")
                     return True
@@ -252,7 +255,7 @@ class NBRepoAdapter:
                     logger.error(f"Failed to unregister {self.repo_url} from KG. Status code: {resp.status}")
                     return False
 
-    async def generate_help_html(self, commit: CommitType) -> str | None:
+    async def _generate_help_html(self, commit: CommitType) -> str | None:
         try:
             help_md = await asyncio.to_thread(self.git_interface.get_repo_file_content, 
                                         path='mmoda_help_page.md', git_ref=commit.id)
@@ -265,7 +268,7 @@ class NBRepoAdapter:
             logger.exception("Unexpected exception in generate_help_html:")
             return None
 
-    async def generate_acknowledgement(self, commit_id: str) -> str:
+    async def _generate_acknowledgement(self, commit_id: str) -> str:
         try:
             acknowl = await asyncio.to_thread(self.git_interface.get_repo_file_content, 
                                         path='acknowledgements.md', git_ref=commit_id)
@@ -283,8 +286,8 @@ class NBRepoAdapter:
 
 
     async def update_frontend_module(self, commit: CommitType): # commit is for info here, it registers current state anyway
-        help_html = await self.generate_help_html(commit)
-        acknowledgement = await self.generate_acknowledgement(commit.id)
+        help_html = await self._generate_help_html(commit)
+        acknowledgement = await self._generate_acknowledgement(commit.id)
 
         self.notifier.on_frontend_update_started(repo_url=self.repo_url, commit=commit)
         async with aiohttp.ClientSession() as session:
@@ -293,24 +296,24 @@ class NBRepoAdapter:
                 "title": self.project_title,
                 "messenger": self.messenger,
                 "creative_work_status": self.creative_work_status,
-                "instrument_version": commit.id,
+                "instrument_version": commit.short_id,
                 "instrument_version_link": self.git_interface.get_commit_link(commit),
                 "help_html": help_html,
                 "acknowledgement": acknowledgement
             }
             try:
-                async with session.post(str(self.config.frontend_controller.url), json=payload) as resp:
+                async with session.post(f"{str(self.config.frontend_controller.url).strip('/')}/modules", json=payload) as resp:
                     if resp.status == 202:
                         job_id = (await resp.json())["job_id"]
                         while True:
                             await asyncio.sleep(5)
-                            async with session.get(f"{self.config.frontend_controller.url}/jobs/{job_id}") as status_resp:
+                            async with session.get(f"{str(self.config.frontend_controller.url).strip('/')}/jobs/{job_id}") as status_resp:
                                 if status_resp.status == 200:
                                     status_data = await status_resp.json()
                                     if status_data["status"] == "done":
                                         break
                                     elif status_data["status"] == "failed":
-                                        self.notifier.on_frontend_update_failed(self.repo_url, commit, response=status_resp)
+                                        self.notifier.on_frontend_update_failed(self.repo_url, commit, status_code=status_resp.status, response_content=await status_resp.json())
                                         return RepoChangeStatus.FRONTEND_UPDATE_FAILED
                                 else:
                                     raise RuntimeError(f"Unexpected status code while checking frontend update job status: {status_resp.status}")
@@ -318,7 +321,7 @@ class NBRepoAdapter:
                         self.notifier.on_frontend_updated(self.repo_url, commit)
                         return RepoChangeStatus.FRONTEND_UPDATED
                     else:
-                        self.notifier.on_frontend_update_failed(self.repo_url, commit, response=resp)
+                        self.notifier.on_frontend_update_failed(self.repo_url, commit, status_code=resp.status, response_content=await resp.json())
                         return RepoChangeStatus.FRONTEND_UPDATE_FAILED
 
             except Exception as e:
@@ -330,8 +333,8 @@ class NBRepoAdapter:
         # TODO: monitor the deletion job
         async with aiohttp.ClientSession() as session:
             try:
-                async with session.delete(f"{self.config.frontend_controller.url}/{self.project_slug}") as resp:
-                    if resp.status == 200:
+                async with session.delete(f"{str(self.config.frontend_controller.url).strip('/')}/modules/{self.project_slug}") as resp:
+                    if resp.status == 202:
                         logger.info(f"Successfully requested frontend to remove module for {self.repo_url}.")
                         return True
                     else:
