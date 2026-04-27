@@ -296,7 +296,7 @@ class NBRepoAdapter:
                 "title": self.project_title,
                 "messenger": self.messenger,
                 "creative_work_status": self.creative_work_status,
-                "instrument_version": commit.id,
+                "instrument_version": commit.short_id,
                 "instrument_version_link": self.git_interface.get_commit_link(commit),
                 "help_html": help_html,
                 "acknowledgement": acknowledgement

@@ -9,6 +9,7 @@ class CommitProtocol(Protocol):
     committed_date: str
     web_url: str
     manager: ProjectCommitManager
+    short_id: str
 
 type CommitType = CommitProtocol | ProjectCommit
 
