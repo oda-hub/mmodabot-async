@@ -125,6 +125,16 @@ class ImageBuilder:
 
         return BuildStatus.QUEUED
 
+    async def check_build_job_succeeded(self, git_ref: str, commit: CommitType) -> bool:
+        image_tag = await self.get_target_image_tag(commit.id)
+        job_id = self._get_job_id(image_tag)
+
+        existing = self.k8interface.jobs.get(job_id)
+        if existing and existing.get("status") == "succeeded":
+            return True
+        return False
+
+
     async def image_exists(self, image_tag: str) -> bool:
         if self.registry_auth:
             authkw = dict(username=self.registry_auth["username"], password=self.registry_auth["password"])

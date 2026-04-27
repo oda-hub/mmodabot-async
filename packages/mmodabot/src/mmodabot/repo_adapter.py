@@ -118,7 +118,7 @@ class NBRepoAdapter:
 
     async def build_mmoda_backend(self, git_ref: str, target_image_tag: str, commit: CommitType):
         try:
-            # this function run in a loop to check status. Notification of build start is in builder
+            # this function run in a loop to check status. Notification of build start is in builder to avoid duplicated notifications
             status = await self.builder.build(git_ref=git_ref, commit=commit)
             if status == BuildStatus.FAILED:
                 logger.error(f"Build failed for {self.repo_url}@{commit.id}")
@@ -131,12 +131,7 @@ class NBRepoAdapter:
                 return status
             if status == BuildStatus.CANCELLED:
                 self.notifier.on_build_cancelled(repo_url=self.repo_url, commit=commit, image_tag=target_image_tag)
-            if status == BuildStatus.SUCCEEDED:
-                self.notifier.on_build_completed(
-                    repo_url=self.repo_url,
-                    commit=commit,
-                    image_repo=self.target_image_base,
-                    image_tag=target_image_tag)
+            # status succeeded notification is in ensure_container_image, as this function is not called upon pushing image to the repo
             return status
         except Exception:
             logger.exception(f"Exception occurred while building backend for {self.repo_url}@{commit.id}")
@@ -149,6 +144,13 @@ class NBRepoAdapter:
 
         if await self.builder.image_exists(target_tag):
             logger.info(f"Image {self.target_image_base}:{target_tag} exists in registry.")
+            if self.config.builder.enabled and self.builder.check_build_job_succeeded(git_ref, commit):
+                # the second check is to avoid trigger after bot restart for pre-existing images
+                self.notifier.on_build_completed(
+                    repo_url=self.repo_url,
+                    commit=commit,
+                    image_repo=self.target_image_base,
+                    image_tag=target_tag)
             return target_tag
 
         if self.config.builder.enabled:
