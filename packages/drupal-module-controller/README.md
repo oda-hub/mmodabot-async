@@ -47,7 +47,7 @@ pytest tests/
 
 ### Environment Variables
 
-- `ODA_JWT_SECRET` - JWT secret for authentication
+- `ODA_JWT_SECRET` - JWT secret to create temporary authentication token to query dispatcher (used by tab generator)
 
 ## License
 
