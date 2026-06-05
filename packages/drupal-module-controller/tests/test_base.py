@@ -64,7 +64,7 @@ class TestDrushFunctions:
 
     def test_get_module_name_with_hyphen(self):
         """Test module name generation with hyphens."""
-        assert get_module_name("my-instrument") == "mmoda_my-instrument"
+        assert get_module_name("my-instrument") == "mmoda_my_instrument"
 
     def test_get_module_name_with_numbers(self):
         """Test module name generation with numbers."""
@@ -333,7 +333,7 @@ class TestDeleteModuleJob:
         assert mock_clear_cache.called
         mock_disable.assert_called_once_with(job_id, "mmoda_remove_me")
         mock_uninstall.assert_called_once_with(job_id, "mmoda_remove_me")
-        mock_delete_module.assert_called_once_with("remove_me")
+        mock_delete_module.assert_called_once_with("mmoda_remove_me")
 
         job = get_job(job_id)
         assert job["status"] == "done"
