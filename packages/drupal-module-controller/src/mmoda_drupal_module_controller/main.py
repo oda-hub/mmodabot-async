@@ -2,17 +2,16 @@ import uuid
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 
 from .models import ModuleCreate, ModuleJobCreated, JobStatus
-from .generator import create_module, delete_module
+from .generator import create_module, delete_module, normalize_name
 from .drush import enable_module, disable_module, uninstall_module, clear_cache, is_module_enabled
 from .jobs import create_job, update_job, get_job, append_log
 from .lock import drush_lock
 
 app = FastAPI()
 
-
 def get_module_name(instr_name: str) -> str:
     """Generate the full Drupal module name from instrument name."""
-    return f"mmoda_{instr_name}"
+    return f"mmoda_{normalize_name(instr_name)}"
 
 
 def install_module_job(
@@ -97,7 +96,7 @@ def delete_module_job(job_id: str, instr_name: str):
             uninstall_module(job_id, get_module_name(instr_name))
 
             append_log(job_id, "Removing files")
-            delete_module(instr_name)
+            delete_module(get_module_name(instr_name))
 
             append_log(job_id, "Clearing cache")
             clear_cache(job_id)

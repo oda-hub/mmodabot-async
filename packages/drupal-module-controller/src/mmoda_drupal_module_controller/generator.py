@@ -5,6 +5,10 @@ from mmoda_tab_generator.tab_generator import MMODATabGenerator
 INSTRUMENTS_DIR = Path("/var/www/mmoda/sites/all/modules/mmoda/instruments/")
 DISPATCHER_URL = "http://oda-dispatcher:8000"
 
+def normalize_name(instr_name: str) -> str:
+    return instr_name.lower().replace(' ', '_').replace('-', '_')
+
+
 def create_module(
         instr_name: str,
         title: str,
@@ -19,7 +23,7 @@ def create_module(
     generator.generate(
         instrument_name=instr_name,
         instruments_dir_path=INSTRUMENTS_DIR,
-        frontend_name=instr_name,
+        frontend_name=normalize_name(instr_name),
         title=title,
         messenger=messenger,
         roles=(
@@ -37,5 +41,5 @@ def create_module(
     )
 
 
-def delete_module(instr_name: str):
-    shutil.rmtree(INSTRUMENTS_DIR / f"mmoda_{instr_name}", ignore_errors=True)
+def delete_module(module_fullname: str):
+    shutil.rmtree(INSTRUMENTS_DIR / module_fullname, ignore_errors=True)
